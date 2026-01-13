@@ -249,7 +249,7 @@ function StoreSelectionModal({ onSelectStore, userRole, onSelectRole }) {
             >
               <Users className="w-8 h-8 mb-2" />
               <span className="font-bold block">RSM</span>
-              <span className="text-xs opacity-80">Regional Sales Manager</span>
+              <span className="text-xs opacity-80">Retail Store Manager</span>
             </button>
             <button
               onClick={() => setSelectedRole(ROLES.EMPLOYEE)}
