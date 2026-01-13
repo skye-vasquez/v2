@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { db, tx, id } from '@/lib/instantdb'
 import { toast } from 'sonner'
+import imageCompression from 'browser-image-compression'
 import {
   Users,
   Package,
@@ -38,7 +39,9 @@ import {
   Trash2,
   UserCog,
   ChevronDown,
-  ArrowLeft
+  ArrowLeft,
+  Loader2,
+  Image as ImageIcon
 } from 'lucide-react'
 
 // ==================== CONSTANTS ====================
