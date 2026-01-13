@@ -442,18 +442,17 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
     problemType: 'damaged',
     notes: '',
     photoUrl: null,
-    photoId: null,
   })
   const [photoPreview, setPhotoPreview] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
-  const [compressionProgress, setCompressionProgress] = useState(0)
+  const [uploadProgress, setUploadProgress] = useState('')
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
 
     setIsUploading(true)
-    setCompressionProgress(0)
+    setUploadProgress('Compressing...')
 
     try {
       // Show original file size
@@ -467,9 +466,6 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
         useWebWorker: true,
         fileType: 'image/jpeg',
         initialQuality: 0.8,
-        onProgress: (progress) => {
-          setCompressionProgress(progress)
-        }
       }
 
       // Compress the image
@@ -481,28 +477,48 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
       const previewUrl = URL.createObjectURL(compressedFile)
       setPhotoPreview(previewUrl)
 
-      // Upload to InstantDB Storage
-      const timestamp = Date.now()
-      const path = `inventory/${store.id}/${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`
+      // Upload to Cloudinary
+      setUploadProgress('Uploading to cloud...')
       
-      const { data } = await db.storage.uploadFile(path, compressedFile)
-      
-      // Get the file URL
-      const fileUrl = data.url || `https://instant-storage.s3.amazonaws.com/${path}`
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+
+      const cloudinaryFormData = new FormData()
+      cloudinaryFormData.append('file', compressedFile)
+      cloudinaryFormData.append('upload_preset', uploadPreset)
+      cloudinaryFormData.append('folder', `compliance_hub/${store.id}`)
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        {
+          method: 'POST',
+          body: cloudinaryFormData,
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Upload failed')
+      }
+
+      const data = await response.json()
       
       setFormData(prev => ({ 
         ...prev, 
-        photoUrl: fileUrl,
-        photoId: data.id 
+        photoUrl: data.secure_url,
       }))
       
       toast.success('Photo uploaded successfully!')
     } catch (error) {
       console.error('Upload error:', error)
       toast.error('Failed to upload photo: ' + error.message)
+      // Clear preview on error
+      if (photoPreview) {
+        URL.revokeObjectURL(photoPreview)
+        setPhotoPreview(null)
+      }
     } finally {
       setIsUploading(false)
-      setCompressionProgress(0)
+      setUploadProgress('')
     }
   }
 
@@ -511,7 +527,7 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
       URL.revokeObjectURL(photoPreview)
     }
     setPhotoPreview(null)
-    setFormData(prev => ({ ...prev, photoUrl: null, photoId: null }))
+    setFormData(prev => ({ ...prev, photoUrl: null }))
   }
 
   const handleSubmit = (e) => {
@@ -596,19 +612,7 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
           {isUploading ? (
             <div className="flex flex-col items-center justify-center h-32">
               <Loader2 className="w-10 h-10 mb-2 text-metro-purple animate-spin" />
-              <span className="text-sm font-bold">
-                {compressionProgress > 0 && compressionProgress < 100 
-                  ? `Compressing... ${compressionProgress}%` 
-                  : 'Uploading...'}
-              </span>
-              {compressionProgress > 0 && (
-                <div className="w-full bg-gray-200 brutal-border mt-2">
-                  <div 
-                    className="bg-metro-purple h-2 transition-all" 
-                    style={{ width: `${compressionProgress}%` }}
-                  />
-                </div>
-              )}
+              <span className="text-sm font-bold">{uploadProgress}</span>
             </div>
           ) : photoPreview || formData.photoUrl ? (
             <div className="relative">
@@ -627,7 +631,7 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
               {formData.photoUrl && (
                 <div className="absolute bottom-2 left-2 bg-metro-green text-black text-xs font-bold px-2 py-1 brutal-border">
                   <CheckCircle className="w-3 h-3 inline mr-1" />
-                  Uploaded
+                  Uploaded to Cloud
                 </div>
               )}
             </div>
@@ -635,7 +639,7 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
             <label className="flex flex-col items-center justify-center h-32 cursor-pointer hover:bg-muted/80 transition-colors">
               <ImageIcon className="w-10 h-10 mb-2 text-muted-foreground" />
               <span className="text-sm font-bold">Click to upload photo</span>
-              <span className="text-xs text-muted-foreground mt-1">Auto-compressed to save space</span>
+              <span className="text-xs text-muted-foreground mt-1">Auto-compressed before upload</span>
               <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
             </label>
           )}
