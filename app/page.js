@@ -119,27 +119,6 @@ function useOfflineQueue() {
     toast.info('Saved offline - will sync when online')
   }
 
-  const syncQueue = async () => {
-    const savedQueue = JSON.parse(localStorage.getItem('offlineQueue') || '[]')
-    if (savedQueue.length === 0) return
-
-    toast.info(`Syncing ${savedQueue.length} offline items...`)
-    
-    for (const item of savedQueue) {
-      try {
-        if (item.transaction) {
-          await db.transact(item.transaction)
-        }
-      } catch (error) {
-        console.error('Sync error:', error)
-      }
-    }
-
-    localStorage.setItem('offlineQueue', '[]')
-    setQueue([])
-    toast.success('All items synced!')
-  }
-
   return { isOnline, queue, addToQueue, syncQueue }
 }
 
