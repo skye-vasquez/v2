@@ -1063,16 +1063,16 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="brutal-card p-4 bg-metro-purple">
-                <p className="text-sm font-bold uppercase text-white">Total Reports</p>
-                <p className="text-4xl font-bold text-white">{stats.totalReports}</p>
+                <p className="text-sm font-bold uppercase text-black">Total Reports</p>
+                <p className="text-4xl font-bold text-black">{stats.totalReports}</p>
               </div>
               <div className="brutal-card p-4 bg-metro-red">
-                <p className="text-sm font-bold uppercase text-white">High Priority</p>
-                <p className="text-4xl font-bold text-white">{stats.highPriority}</p>
+                <p className="text-sm font-bold uppercase text-black">High Priority</p>
+                <p className="text-4xl font-bold text-black">{stats.highPriority}</p>
               </div>
               <div className="brutal-card p-4 bg-metro-blue">
-                <p className="text-sm font-bold uppercase text-white">Total Users</p>
-                <p className="text-4xl font-bold text-white">{stats.totalUsers}</p>
+                <p className="text-sm font-bold uppercase text-black">Total Users</p>
+                <p className="text-4xl font-bold text-black">{stats.totalUsers}</p>
               </div>
               <div className="brutal-card p-4 bg-metro-green">
                 <p className="text-sm font-bold uppercase text-black">Stores</p>
