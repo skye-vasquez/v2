@@ -29,7 +29,16 @@ import {
   FileText,
   Wrench,
   Sun,
-  Moon
+  Moon,
+  Shield,
+  Settings,
+  BarChart3,
+  Eye,
+  Edit,
+  Trash2,
+  UserCog,
+  ChevronDown,
+  ArrowLeft
 } from 'lucide-react'
 
 // ==================== CONSTANTS ====================
@@ -43,8 +52,15 @@ const STORES = [
 ]
 
 const ROLES = {
+  ADMIN: 'admin',
   RSM: 'rsm',
   EMPLOYEE: 'employee',
+}
+
+const ROLE_LABELS = {
+  admin: 'Administrator',
+  rsm: 'Retail Store Manager',
+  employee: 'Store Employee',
 }
 
 // ==================== OFFLINE QUEUE HOOK ====================
@@ -63,7 +79,6 @@ function useOfflineQueue() {
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
 
-    // Load queue from localStorage
     const savedQueue = localStorage.getItem('offlineQueue')
     if (savedQueue) setQueue(JSON.parse(savedQueue))
 
@@ -88,7 +103,6 @@ function useOfflineQueue() {
     
     for (const item of savedQueue) {
       try {
-        // Process each queued transaction
         if (item.transaction) {
           await db.transact(item.transaction)
         }
@@ -218,16 +232,14 @@ function AuthScreen({ onAuth }) {
 }
 
 // ==================== STORE SELECTION MODAL ====================
-function StoreSelectionModal({ onSelectStore, userRole, onSelectRole }) {
+function StoreSelectionModal({ onSelectStore, userRole }) {
   const [selectedStore, setSelectedStore] = useState(null)
-  const [selectedRole, setSelectedRole] = useState(null)
 
   const handleContinue = () => {
-    if (!selectedStore || !selectedRole) {
-      return toast.error('Please select a store and role')
+    if (!selectedStore) {
+      return toast.error('Please select a store')
     }
     onSelectStore(selectedStore)
-    onSelectRole(selectedRole)
   }
 
   return (
@@ -237,38 +249,15 @@ function StoreSelectionModal({ onSelectStore, userRole, onSelectRole }) {
           <Building2 className="w-16 h-16 mx-auto text-white mb-4" />
           <h1 className="text-3xl font-bold text-white uppercase">Select Your Store</h1>
           <p className="text-white/80 mt-2">Choose your current location to continue</p>
+          <div className={`inline-block mt-4 brutal-border px-4 py-2 font-bold ${
+            userRole === ROLES.ADMIN ? 'bg-metro-red text-white' :
+            userRole === ROLES.RSM ? 'bg-metro-yellow text-black' : 'bg-white text-black'
+          }`}>
+            {ROLE_LABELS[userRole]}
+          </div>
         </div>
 
         <div className="brutal-card p-6">
-          {/* Role Selection */}
-          <label className="block text-sm font-bold uppercase mb-3">Your Role</label>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <button
-              onClick={() => setSelectedRole(ROLES.RSM)}
-              className={`brutal-border p-4 text-left transition-all ${
-                selectedRole === ROLES.RSM
-                  ? 'bg-metro-purple text-white brutal-shadow-purple'
-                  : 'bg-white hover:bg-muted brutal-shadow'
-              }`}
-            >
-              <Users className="w-8 h-8 mb-2" />
-              <span className="font-bold block">RSM</span>
-              <span className="text-xs opacity-80">Retail Store Manager</span>
-            </button>
-            <button
-              onClick={() => setSelectedRole(ROLES.EMPLOYEE)}
-              className={`brutal-border p-4 text-left transition-all ${
-                selectedRole === ROLES.EMPLOYEE
-                  ? 'bg-metro-green text-black brutal-shadow-green'
-                  : 'bg-white hover:bg-muted brutal-shadow'
-              }`}
-            >
-              <UserCheck className="w-8 h-8 mb-2" />
-              <span className="font-bold block">Employee</span>
-              <span className="text-xs opacity-80">Store Staff</span>
-            </button>
-          </div>
-
           {/* Store Selection */}
           <label className="block text-sm font-bold uppercase mb-3">Store Location</label>
           <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -296,7 +285,7 @@ function StoreSelectionModal({ onSelectStore, userRole, onSelectRole }) {
 
           <button
             onClick={handleContinue}
-            disabled={!selectedStore || !selectedRole}
+            disabled={!selectedStore}
             className="brutal-btn w-full bg-black text-white py-4 text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue to Dashboard
@@ -896,7 +885,7 @@ function StoreActionForm({ onClose, onSubmit, store, actionType = 'checklist' })
 }
 
 // ==================== REPORTS LIST ====================
-function ReportsList({ reports, title }) {
+function ReportsList({ reports, title, showStore = true }) {
   if (!reports || reports.length === 0) {
     return (
       <div className="brutal-border p-8 text-center bg-muted">
@@ -908,8 +897,8 @@ function ReportsList({ reports, title }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-lg font-bold uppercase">{title}</h3>
-      {reports.slice(0, 5).map((report) => (
+      {title && <h3 className="text-lg font-bold uppercase">{title}</h3>}
+      {reports.map((report) => (
         <div key={report.id} className="brutal-border p-4 bg-white">
           <div className="flex items-start justify-between">
             <div>
@@ -931,7 +920,7 @@ function ReportsList({ reports, title }) {
               {new Date(report.createdAt).toLocaleDateString()}
             </span>
           </div>
-          <p className="mt-2 font-medium">{report.storeName}</p>
+          {showStore && <p className="mt-2 font-medium">{report.storeName}</p>}
           {report.description && (
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{report.description}</p>
           )}
@@ -946,18 +935,282 @@ function ReportsList({ reports, title }) {
   )
 }
 
+// ==================== ADMIN DASHBOARD ====================
+function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboard }) {
+  const [activeTab, setActiveTab] = useState('overview')
+  const [editingUser, setEditingUser] = useState(null)
+  
+  // Query data
+  const { data: reportsData } = db.useQuery({ reports: {} })
+  const { data: usersData } = db.useQuery({ users: {} })
+  
+  const reports = reportsData?.reports || []
+  const users = usersData?.users || []
+
+  const handleRoleChange = async (userId, newRole) => {
+    try {
+      await db.transact(tx.users[userId].update({ role: newRole }))
+      toast.success(`Role updated to ${ROLE_LABELS[newRole]}`)
+      setEditingUser(null)
+    } catch (error) {
+      toast.error('Failed to update role')
+    }
+  }
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('Are you sure you want to delete this user?')) return
+    try {
+      await db.transact(tx.users[userId].delete())
+      toast.success('User deleted')
+    } catch (error) {
+      toast.error('Failed to delete user')
+    }
+  }
+
+  // Stats
+  const stats = {
+    totalReports: reports.length,
+    highPriority: reports.filter(r => r.priority === 'high').length,
+    totalUsers: users.length,
+    byCategory: {
+      employee: reports.filter(r => r.category === 'employee_action').length,
+      inventory: reports.filter(r => r.category === 'inventory_action').length,
+      cash: reports.filter(r => r.category === 'cash_action').length,
+      store: reports.filter(r => r.category === 'store_action').length,
+    },
+    byStore: STORES.reduce((acc, store) => {
+      acc[store.id] = reports.filter(r => r.storeId === store.id).length
+      return acc
+    }, {}),
+  }
+
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="brutal-border border-t-0 border-x-0 bg-metro-red text-white p-4">
+        <div className="container flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={onBackToDashboard} className="brutal-btn bg-white text-black p-2">
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold uppercase flex items-center gap-2">
+                <Shield className="w-6 h-6" />
+                Admin Dashboard
+              </h1>
+              <p className="text-sm opacity-80">Compliance Hub Management</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <span className="brutal-border bg-white text-black px-3 py-1 text-sm font-bold">
+              {user.email}
+            </span>
+            <button onClick={onLogout} className="brutal-btn bg-white text-black p-2">
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Tabs */}
+      <div className="container py-4">
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { id: 'overview', label: 'Overview', icon: BarChart3 },
+            { id: 'reports', label: 'All Reports', icon: FileText },
+            { id: 'users', label: 'User Management', icon: Users },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`brutal-btn px-4 py-2 flex items-center gap-2 ${
+                activeTab === tab.id ? 'bg-black text-white' : 'bg-white text-black'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <main className="container pb-8">
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="brutal-card p-4 bg-metro-purple text-white">
+                <p className="text-sm font-bold uppercase">Total Reports</p>
+                <p className="text-4xl font-bold">{stats.totalReports}</p>
+              </div>
+              <div className="brutal-card p-4 bg-metro-red text-white">
+                <p className="text-sm font-bold uppercase">High Priority</p>
+                <p className="text-4xl font-bold">{stats.highPriority}</p>
+              </div>
+              <div className="brutal-card p-4 bg-metro-blue text-white">
+                <p className="text-sm font-bold uppercase">Total Users</p>
+                <p className="text-4xl font-bold">{stats.totalUsers}</p>
+              </div>
+              <div className="brutal-card p-4 bg-metro-green text-black">
+                <p className="text-sm font-bold uppercase">Stores</p>
+                <p className="text-4xl font-bold">{STORES.length}</p>
+              </div>
+            </div>
+
+            {/* Category Breakdown */}
+            <div className="brutal-card p-6">
+              <h3 className="text-lg font-bold uppercase mb-4">Reports by Category</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="brutal-border p-4 bg-metro-purple/10">
+                  <Users className="w-8 h-8 mb-2 text-metro-purple" />
+                  <p className="text-2xl font-bold">{stats.byCategory.employee}</p>
+                  <p className="text-sm">Employee Actions</p>
+                </div>
+                <div className="brutal-border p-4 bg-metro-blue/10">
+                  <Package className="w-8 h-8 mb-2 text-metro-blue" />
+                  <p className="text-2xl font-bold">{stats.byCategory.inventory}</p>
+                  <p className="text-sm">Inventory Actions</p>
+                </div>
+                <div className="brutal-border p-4 bg-metro-green/10">
+                  <DollarSign className="w-8 h-8 mb-2 text-metro-green" />
+                  <p className="text-2xl font-bold">{stats.byCategory.cash}</p>
+                  <p className="text-sm">Cash Actions</p>
+                </div>
+                <div className="brutal-border p-4 bg-metro-yellow/10">
+                  <Store className="w-8 h-8 mb-2 text-metro-orange" />
+                  <p className="text-2xl font-bold">{stats.byCategory.store}</p>
+                  <p className="text-sm">Store Actions</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Store Breakdown */}
+            <div className="brutal-card p-6">
+              <h3 className="text-lg font-bold uppercase mb-4">Reports by Store</h3>
+              <div className="space-y-2">
+                {STORES.map((store) => (
+                  <div key={store.id} className="brutal-border p-3 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold">{store.name}</span>
+                      <span className="text-xs font-mono ml-2 bg-black text-white px-2 py-0.5">
+                        {store.id}
+                      </span>
+                    </div>
+                    <span className="text-2xl font-bold">{stats.byStore[store.id] || 0}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'reports' && (
+          <div className="brutal-card p-6">
+            <h3 className="text-lg font-bold uppercase mb-4">All Submissions ({reports.length})</h3>
+            <ReportsList reports={reports.sort((a, b) => b.createdAt - a.createdAt)} />
+          </div>
+        )}
+
+        {activeTab === 'users' && (
+          <div className="brutal-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold uppercase">User Management ({users.length})</h3>
+            </div>
+            
+            {users.length === 0 ? (
+              <div className="brutal-border p-8 text-center bg-muted">
+                <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="font-bold">No users yet</p>
+                <p className="text-sm text-muted-foreground">Users will appear here after they sign in</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {users.map((u) => (
+                  <div key={u.id} className="brutal-border p-4 bg-white flex items-center justify-between">
+                    <div>
+                      <p className="font-bold">{u.email}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xs font-bold px-2 py-1 ${
+                          u.role === ROLES.ADMIN ? 'bg-metro-red text-white' :
+                          u.role === ROLES.RSM ? 'bg-metro-yellow text-black' :
+                          'bg-muted text-black'
+                        }`}>
+                          {ROLE_LABELS[u.role] || 'Employee'}
+                        </span>
+                        {u.storeId && (
+                          <span className="text-xs font-mono bg-black text-white px-2 py-0.5">
+                            {u.storeId}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {editingUser === u.id ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="brutal-input text-sm py-1"
+                            defaultValue={u.role}
+                            onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          >
+                            <option value={ROLES.EMPLOYEE}>Employee</option>
+                            <option value={ROLES.RSM}>RSM</option>
+                            <option value={ROLES.ADMIN}>Admin</option>
+                          </select>
+                          <button
+                            onClick={() => setEditingUser(null)}
+                            className="brutal-btn bg-muted p-2"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setEditingUser(u.id)}
+                            className="brutal-btn bg-metro-blue text-white p-2"
+                            title="Edit Role"
+                          >
+                            <UserCog className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(u.id)}
+                            className="brutal-btn bg-metro-red text-white p-2"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
+
 // ==================== MAIN DASHBOARD ====================
-function Dashboard({ user, store, role, onLogout, onChangeStore }) {
+function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
   const { isOnline, queue, addToQueue } = useOfflineQueue()
   const [activeModal, setActiveModal] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false)
+
+  const role = userProfile?.role || ROLES.EMPLOYEE
 
   // Query reports from InstantDB
   const { data, isLoading } = db.useQuery({ reports: {} })
   const reports = data?.reports || []
 
-  // Filter reports for current store (employees) or all (RSM)
-  const filteredReports = role === ROLES.RSM 
+  // Filter reports for current store (employees) or all (RSM/Admin)
+  const filteredReports = role === ROLES.ADMIN || role === ROLES.RSM
     ? reports 
     : reports.filter(r => r.storeId === store.id)
 
@@ -966,7 +1219,7 @@ function Dashboard({ user, store, role, onLogout, onChangeStore }) {
     const transaction = tx.reports[reportId].update({
       ...reportData,
       id: reportId,
-      userId: user.id,
+      oduserId: user.id,
       userEmail: user.email,
     })
 
@@ -984,6 +1237,19 @@ function Dashboard({ user, store, role, onLogout, onChangeStore }) {
   }
 
   const isEmployee = role === ROLES.EMPLOYEE
+  const isAdmin = role === ROLES.ADMIN
+
+  if (showAdminDashboard && isAdmin) {
+    return (
+      <AdminDashboard
+        user={user}
+        store={store}
+        onLogout={onLogout}
+        onChangeStore={onChangeStore}
+        onBackToDashboard={() => setShowAdminDashboard(false)}
+      />
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -1026,10 +1292,22 @@ function Dashboard({ user, store, role, onLogout, onChangeStore }) {
 
             {/* Role Badge */}
             <span className={`brutal-border px-3 py-1 text-sm font-bold hidden sm:block ${
+              role === ROLES.ADMIN ? 'bg-metro-red text-white' :
               role === ROLES.RSM ? 'bg-metro-yellow text-black' : 'bg-white text-black'
             }`}>
-              {role === ROLES.RSM ? 'RSM' : 'Employee'}
+              {role === ROLES.ADMIN ? 'Admin' : role === ROLES.RSM ? 'RSM' : 'Employee'}
             </span>
+
+            {/* Admin Dashboard Button */}
+            {isAdmin && (
+              <button
+                onClick={() => setShowAdminDashboard(true)}
+                className="brutal-btn bg-metro-red text-white p-2"
+                title="Admin Dashboard"
+              >
+                <Shield className="w-5 h-5" />
+              </button>
+            )}
 
             {/* Logout */}
             <button
@@ -1059,7 +1337,7 @@ function Dashboard({ user, store, role, onLogout, onChangeStore }) {
               </div>
               <div className="brutal-border p-3 bg-muted">
                 <p className="text-sm font-bold">Role</p>
-                <p>{role === ROLES.RSM ? 'Retail Store Manager' : 'Store Employee'}</p>
+                <p>{ROLE_LABELS[role]}</p>
               </div>
               <div className="brutal-border p-3 bg-muted">
                 <p className="text-sm font-bold">Email</p>
@@ -1071,6 +1349,15 @@ function Dashboard({ user, store, role, onLogout, onChangeStore }) {
               >
                 Change Store
               </button>
+              {isAdmin && (
+                <button
+                  onClick={() => { setSidebarOpen(false); setShowAdminDashboard(true); }}
+                  className="brutal-btn w-full bg-metro-red text-white py-3"
+                >
+                  <Shield className="w-5 h-5 inline mr-2" />
+                  Admin Dashboard
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1082,13 +1369,13 @@ function Dashboard({ user, store, role, onLogout, onChangeStore }) {
         <div className="brutal-card bg-metro-yellow p-6 mb-8">
           <h2 className="text-2xl font-bold">Welcome back!</h2>
           <p className="text-lg">
-            {store.name} • {role === ROLES.RSM ? 'Retail Store Manager' : 'Store Employee'}
+            {store.name} • {ROLE_LABELS[role]}
           </p>
         </div>
 
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Employee Action - RSM Only */}
+          {/* Employee Action - RSM & Admin Only */}
           <DashboardCard
             title="Employee Action"
             icon={Users}
@@ -1133,7 +1420,10 @@ function Dashboard({ user, store, role, onLogout, onChangeStore }) {
             <h3 className="text-xl font-bold uppercase">Recent Activity</h3>
             {isLoading && <span className="text-sm text-muted-foreground">Loading...</span>}
           </div>
-          <ReportsList reports={filteredReports} title="" />
+          <ReportsList 
+            reports={filteredReports.sort((a, b) => b.createdAt - a.createdAt).slice(0, 5)} 
+            showStore={role !== ROLES.EMPLOYEE}
+          />
         </div>
       </main>
 
@@ -1318,40 +1608,87 @@ function Dashboard({ user, store, role, onLogout, onChangeStore }) {
 
 // ==================== MAIN APP ====================
 export default function App() {
-  const { isLoading, user, error } = db.useAuth()
+  const { isLoading: authLoading, user, error } = db.useAuth()
   const [selectedStore, setSelectedStore] = useState(null)
-  const [selectedRole, setSelectedRole] = useState(null)
+  const [userProfile, setUserProfile] = useState(null)
+  const [profileLoading, setProfileLoading] = useState(false)
 
-  // Load stored preferences
+  // Query user profile from database
+  const { data: usersData, isLoading: usersLoading } = db.useQuery(
+    user ? { users: { $: { where: { odEmail: user.email } } } } : null
+  )
+
+  // Create or fetch user profile when user logs in
+  useEffect(() => {
+    const setupUserProfile = async () => {
+      if (!user || usersLoading) return
+      
+      setProfileLoading(true)
+      const existingUsers = usersData?.users || []
+      
+      if (existingUsers.length > 0) {
+        // User exists, use their profile
+        setUserProfile(existingUsers[0])
+      } else {
+        // New user, create profile with default employee role
+        const userId = id()
+        try {
+          await db.transact(tx.users[userId].update({
+            id: userId,
+            odEmail: user.email,
+            odId: user.id,
+            role: ROLES.EMPLOYEE, // Default role
+            createdAt: Date.now(),
+          }))
+          setUserProfile({
+            id: userId,
+            odEmail: user.email,
+            odId: user.id,
+            role: ROLES.EMPLOYEE,
+          })
+          toast.success('Welcome! Your account has been created.')
+        } catch (error) {
+          console.error('Failed to create user profile:', error)
+        }
+      }
+      setProfileLoading(false)
+    }
+
+    setupUserProfile()
+  }, [user, usersData, usersLoading])
+
+  // Update userProfile when data changes (e.g., role updated by admin)
+  useEffect(() => {
+    if (usersData?.users?.length > 0) {
+      setUserProfile(usersData.users[0])
+    }
+  }, [usersData])
+
+  // Load stored store preference
   useEffect(() => {
     const storedStore = localStorage.getItem('selectedStore')
-    const storedRole = localStorage.getItem('selectedRole')
     if (storedStore) setSelectedStore(JSON.parse(storedStore))
-    if (storedRole) setSelectedRole(storedRole)
   }, [])
 
-  // Save preferences
+  // Save store preference
   useEffect(() => {
     if (selectedStore) localStorage.setItem('selectedStore', JSON.stringify(selectedStore))
-    if (selectedRole) localStorage.setItem('selectedRole', selectedRole)
-  }, [selectedStore, selectedRole])
+  }, [selectedStore])
 
   const handleLogout = async () => {
     await db.auth.signOut()
     setSelectedStore(null)
-    setSelectedRole(null)
+    setUserProfile(null)
     localStorage.removeItem('selectedStore')
-    localStorage.removeItem('selectedRole')
     toast.success('Signed out')
   }
 
   const handleChangeStore = () => {
     setSelectedStore(null)
-    setSelectedRole(null)
   }
 
   // Loading state
-  if (isLoading) {
+  if (authLoading || profileLoading || (user && usersLoading)) {
     return (
       <div className="min-h-screen bg-metro-purple flex items-center justify-center">
         <div className="text-center text-white">
@@ -1369,12 +1706,26 @@ export default function App() {
     return <AuthScreen />
   }
 
+  // Waiting for profile
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-metro-purple flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="brutal-card bg-white p-8 inline-block mb-4">
+            <UserCheck className="w-16 h-16 animate-pulse" />
+          </div>
+          <p className="text-xl font-bold">Setting up your account...</p>
+        </div>
+      </div>
+    )
+  }
+
   // Store not selected
-  if (!selectedStore || !selectedRole) {
+  if (!selectedStore) {
     return (
       <StoreSelectionModal
         onSelectStore={setSelectedStore}
-        onSelectRole={setSelectedRole}
+        userRole={userProfile.role}
       />
     )
   }
@@ -1383,8 +1734,8 @@ export default function App() {
   return (
     <Dashboard
       user={user}
+      userProfile={userProfile}
       store={selectedStore}
-      role={selectedRole}
       onLogout={handleLogout}
       onChangeStore={handleChangeStore}
     />
