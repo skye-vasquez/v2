@@ -1,5 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#8B5CF6"/>
-  <rect x="128" y="128" width="256" height="256" fill="white" stroke="black" stroke-width="16"/>
-  <text x="256" y="280" font-family="Arial Black" font-size="72" text-anchor="middle" fill="black">CH</text>
+  <!-- Background -->
+  <rect width="512" height="512" fill="#FACC15"/>
+  
+  <!-- Shield shape -->
+  <path d="M256 56c-100 0-160 40-160 40v180c0 100 160 180 160 180s160-80 160-180V96S356 56 256 56z" 
+        fill="none" 
+        stroke="#000000" 
+        stroke-width="24" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- Inner shield fill (optional slight fill for depth) -->
+  <path d="M256 76c-90 0-140 36-140 36v164c0 90 140 160 140 160s140-70 140-160V112S346 76 256 76z" 
+        fill="#FACC15"/>
+  
+  <!-- Checkmark circle -->
+  <circle cx="256" cy="260" r="80" fill="none" stroke="#8B5CF6" stroke-width="20"/>
+  
+  <!-- Checkmark -->
+  <path d="M216 260l30 30 60-60" 
+        fill="none" 
+        stroke="#8B5CF6" 
+        stroke-width="20" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
 </svg>
