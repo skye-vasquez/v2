@@ -441,18 +441,77 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
     quantity: '',
     problemType: 'damaged',
     notes: '',
-    photo: null,
+    photoUrl: null,
+    photoId: null,
   })
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [compressionProgress, setCompressionProgress] = useState(0)
 
-  const handlePhotoUpload = (e) => {
+  const handlePhotoUpload = async (e) => {
     const file = e.target.files[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setFormData({ ...formData, photo: reader.result })
+    if (!file) return
+
+    setIsUploading(true)
+    setCompressionProgress(0)
+
+    try {
+      // Show original file size
+      const originalSize = (file.size / 1024 / 1024).toFixed(2)
+      toast.info(`Original size: ${originalSize}MB - Compressing...`)
+
+      // Compression options
+      const options = {
+        maxSizeMB: 0.5, // Max 500KB
+        maxWidthOrHeight: 1200,
+        useWebWorker: true,
+        fileType: 'image/jpeg',
+        initialQuality: 0.8,
+        onProgress: (progress) => {
+          setCompressionProgress(progress)
+        }
       }
-      reader.readAsDataURL(file)
+
+      // Compress the image
+      const compressedFile = await imageCompression(file, options)
+      const compressedSize = (compressedFile.size / 1024 / 1024).toFixed(2)
+      toast.success(`Compressed to ${compressedSize}MB`)
+
+      // Create preview
+      const previewUrl = URL.createObjectURL(compressedFile)
+      setPhotoPreview(previewUrl)
+
+      // Upload to InstantDB Storage
+      const timestamp = Date.now()
+      const path = `inventory/${store.id}/${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`
+      
+      const { data } = await db.storage.uploadFile(path, compressedFile)
+      
+      // Get the file URL
+      const fileUrl = data.url || `https://instant-storage.s3.amazonaws.com/${path}`
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        photoUrl: fileUrl,
+        photoId: data.id 
+      }))
+      
+      toast.success('Photo uploaded successfully!')
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Failed to upload photo: ' + error.message)
+    } finally {
+      setIsUploading(false)
+      setCompressionProgress(0)
     }
+  }
+
+  const handleRemovePhoto = () => {
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview)
+    }
+    setPhotoPreview(null)
+    setFormData(prev => ({ ...prev, photoUrl: null, photoId: null }))
   }
 
   const handleSubmit = (e) => {
@@ -464,6 +523,9 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
       category: 'inventory_action',
       createdAt: Date.now(),
     })
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview)
+    }
     onClose()
   }
 
@@ -531,21 +593,49 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
       <div>
         <label className="block text-sm font-bold uppercase mb-2">Photo Evidence</label>
         <div className="brutal-border p-4 bg-muted">
-          {formData.photo ? (
+          {isUploading ? (
+            <div className="flex flex-col items-center justify-center h-32">
+              <Loader2 className="w-10 h-10 mb-2 text-metro-purple animate-spin" />
+              <span className="text-sm font-bold">
+                {compressionProgress > 0 && compressionProgress < 100 
+                  ? `Compressing... ${compressionProgress}%` 
+                  : 'Uploading...'}
+              </span>
+              {compressionProgress > 0 && (
+                <div className="w-full bg-gray-200 brutal-border mt-2">
+                  <div 
+                    className="bg-metro-purple h-2 transition-all" 
+                    style={{ width: `${compressionProgress}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          ) : photoPreview || formData.photoUrl ? (
             <div className="relative">
-              <img src={formData.photo} alt="Evidence" className="w-full h-48 object-cover brutal-border" />
+              <img 
+                src={photoPreview || formData.photoUrl} 
+                alt="Evidence" 
+                className="w-full h-48 object-cover brutal-border" 
+              />
               <button
                 type="button"
-                onClick={() => setFormData({ ...formData, photo: null })}
+                onClick={handleRemovePhoto}
                 className="absolute top-2 right-2 brutal-btn bg-metro-red text-white p-1"
               >
                 <X className="w-4 h-4" />
               </button>
+              {formData.photoUrl && (
+                <div className="absolute bottom-2 left-2 bg-metro-green text-black text-xs font-bold px-2 py-1 brutal-border">
+                  <CheckCircle className="w-3 h-3 inline mr-1" />
+                  Uploaded
+                </div>
+              )}
             </div>
           ) : (
-            <label className="flex flex-col items-center justify-center h-32 cursor-pointer">
-              <Upload className="w-10 h-10 mb-2 text-muted-foreground" />
+            <label className="flex flex-col items-center justify-center h-32 cursor-pointer hover:bg-muted/80 transition-colors">
+              <ImageIcon className="w-10 h-10 mb-2 text-muted-foreground" />
               <span className="text-sm font-bold">Click to upload photo</span>
+              <span className="text-xs text-muted-foreground mt-1">Auto-compressed to save space</span>
               <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
             </label>
           )}
@@ -562,7 +652,11 @@ function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
         />
       </div>
 
-      <button type="submit" className="brutal-btn w-full bg-metro-blue text-white py-4">
+      <button 
+        type="submit" 
+        className="brutal-btn w-full bg-metro-blue text-white py-4"
+        disabled={isUploading}
+      >
         <Send className="w-5 h-5 inline mr-2" />
         {isAudit ? 'Submit Stock Audit' : 'Report Inventory Problem'}
       </button>
