@@ -686,16 +686,27 @@ function CashActionForm({ onClose, onSubmit, store, isShortage = false }) {
 
 // ==================== STORE ACTION FORM ====================
 function StoreActionForm({ onClose, onSubmit, store, actionType = 'checklist' }) {
-  const checklistItems = actionType === 'checklist' ? [
-    { id: 'displays', label: 'All displays powered on and functioning' },
-    { id: 'signage', label: 'Promotional signage in place' },
-    { id: 'inventory', label: 'Floor inventory stocked' },
-    { id: 'registers', label: 'All registers operational' },
-    { id: 'security', label: 'Security systems armed/disarmed' },
-    { id: 'cleanliness', label: 'Store clean and organized' },
-    { id: 'safe', label: 'Safe secured/opened as needed' },
-    { id: 'lights', label: 'All lights on/off as required' },
-  ] : []
+  const openingChecklistItems = [
+    { id: 'alarm', label: 'Disarm security alarm' },
+    { id: 'lights', label: 'Turn on all lights' },
+    { id: 'hvac', label: 'Check HVAC system' },
+    { id: 'displays', label: 'Power on all displays' },
+    { id: 'registers', label: 'Open and count cash drawers' },
+    { id: 'pos', label: 'Boot up POS systems' },
+    { id: 'inventory', label: 'Check floor inventory stock' },
+    { id: 'signage', label: 'Set up promotional signage' },
+  ]
+
+  const closingChecklistItems = [
+    { id: 'transactions', label: 'Complete all pending transactions' },
+    { id: 'cash', label: 'Count and reconcile cash drawers' },
+    { id: 'pos', label: 'Power down POS systems properly' },
+    { id: 'inventory', label: 'Secure all inventory and displays' },
+    { id: 'clean', label: 'Clean and organize sales floor' },
+    { id: 'trash', label: 'Empty trash and recycling' },
+    { id: 'restrooms', label: 'Check restrooms and break areas' },
+    { id: 'alarm', label: 'Set alarm and lock all doors' },
+  ]
 
   const [checkedItems, setCheckedItems] = useState({})
   const [checklistType, setChecklistType] = useState('open')
@@ -706,8 +717,16 @@ function StoreActionForm({ onClose, onSubmit, store, actionType = 'checklist' })
     description: '',
   })
 
+  const checklistItems = checklistType === 'open' ? openingChecklistItems : closingChecklistItems
+
   const toggleItem = (itemId) => {
     setCheckedItems(prev => ({ ...prev, [itemId]: !prev[itemId] }))
+  }
+
+  // Reset checked items when switching checklist type
+  const handleChecklistTypeChange = (type) => {
+    setChecklistType(type)
+    setCheckedItems({})
   }
 
   const handleSubmit = (e) => {
@@ -816,7 +835,7 @@ function StoreActionForm({ onClose, onSubmit, store, actionType = 'checklist' })
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => setChecklistType('open')}
+            onClick={() => handleChecklistTypeChange('open')}
             className={`brutal-border p-4 flex items-center gap-3 ${
               checklistType === 'open' ? 'bg-metro-yellow' : 'bg-white'
             }`}
@@ -826,7 +845,7 @@ function StoreActionForm({ onClose, onSubmit, store, actionType = 'checklist' })
           </button>
           <button
             type="button"
-            onClick={() => setChecklistType('close')}
+            onClick={() => handleChecklistTypeChange('close')}
             className={`brutal-border p-4 flex items-center gap-3 ${
               checklistType === 'close' ? 'bg-metro-purple text-white' : 'bg-white'
             }`}
@@ -839,13 +858,15 @@ function StoreActionForm({ onClose, onSubmit, store, actionType = 'checklist' })
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <label className="text-sm font-bold uppercase">Checklist Items</label>
+          <label className="text-sm font-bold uppercase">
+            {checklistType === 'open' ? 'Opening' : 'Closing'} Checklist
+          </label>
           <span className="text-sm font-bold bg-black text-white px-2 py-1">
             {completedCount}/{checklistItems.length}
           </span>
         </div>
         <div className="space-y-2 max-h-64 overflow-y-auto">
-          {checklistItems.map((item) => (
+          {checklistItems.map((item, index) => (
             <button
               key={item.id}
               type="button"
@@ -859,7 +880,7 @@ function StoreActionForm({ onClose, onSubmit, store, actionType = 'checklist' })
               }`}>
                 {checkedItems[item.id] && <CheckCircle className="w-4 h-4 text-white" />}
               </div>
-              <span className="font-medium">{item.label}</span>
+              <span className="font-medium">{index + 1}. {item.label}</span>
             </button>
           ))}
         </div>
