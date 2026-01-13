@@ -1164,19 +1164,19 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
       {/* Content */}
       <main className="container pb-8 px-3 sm:px-4">
         {activeTab === 'overview' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="brutal-card p-4 bg-metro-purple">
-                <p className="text-sm font-bold uppercase text-black">Total Reports</p>
-                <p className="text-4xl font-bold text-black">{stats.totalReports}</p>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="brutal-card p-3 sm:p-4 bg-metro-purple">
+                <p className="text-xs sm:text-sm font-bold uppercase text-black">Total Reports</p>
+                <p className="text-3xl sm:text-4xl font-bold text-black">{stats.totalReports}</p>
               </div>
-              <div className="brutal-card p-4 bg-metro-red">
-                <p className="text-sm font-bold uppercase text-black">High Priority</p>
-                <p className="text-4xl font-bold text-black">{stats.highPriority}</p>
+              <div className="brutal-card p-3 sm:p-4 bg-metro-red">
+                <p className="text-xs sm:text-sm font-bold uppercase text-black">High Priority</p>
+                <p className="text-3xl sm:text-4xl font-bold text-black">{stats.highPriority}</p>
               </div>
-              <div className="brutal-card p-4 bg-metro-blue">
-                <p className="text-sm font-bold uppercase text-black">Total Users</p>
+              <div className="brutal-card p-3 sm:p-4 bg-metro-blue">
+                <p className="text-xs sm:text-sm font-bold uppercase text-black">Total Users</p>
                 <p className="text-3xl sm:text-4xl font-bold text-black">{stats.totalUsers}</p>
               </div>
               <div className="brutal-card p-3 sm:p-4 bg-metro-green">
