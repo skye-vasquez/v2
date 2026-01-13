@@ -1055,7 +1055,7 @@ function Dashboard({ user, store, role, onLogout, onChangeStore }) {
               </div>
               <div className="brutal-border p-3 bg-muted">
                 <p className="text-sm font-bold">Role</p>
-                <p>{role === ROLES.RSM ? 'Regional Sales Manager' : 'Store Employee'}</p>
+                <p>{role === ROLES.RSM ? 'Retail Store Manager' : 'Store Employee'}</p>
               </div>
               <div className="brutal-border p-3 bg-muted">
                 <p className="text-sm font-bold">Email</p>
