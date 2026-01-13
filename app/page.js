@@ -1,45 +1,1387 @@
 'use client'
 
-import { useEffect } from "react";
+import { useState, useEffect } from 'react'
+import { db, tx, id } from '@/lib/instantdb'
+import { toast } from 'sonner'
+import {
+  Users,
+  Package,
+  DollarSign,
+  Store,
+  LogOut,
+  Menu,
+  X,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Send,
+  Building2,
+  ChevronRight,
+  Wifi,
+  WifiOff,
+  Plus,
+  Upload,
+  Clipboard,
+  AlertCircle,
+  Award,
+  UserCheck,
+  Calendar,
+  FileText,
+  Wrench,
+  Sun,
+  Moon
+} from 'lucide-react'
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await fetch('/api/');
-      const data = await response.json();
-      console.log(data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+// ==================== CONSTANTS ====================
+const STORES = [
+  { id: 'STR001', name: 'Metro Downtown', address: '123 Main St' },
+  { id: 'STR002', name: 'Metro Eastside', address: '456 Oak Ave' },
+  { id: 'STR003', name: 'Metro Westfield', address: '789 Pine Rd' },
+  { id: 'STR004', name: 'Metro Northgate', address: '321 Elm Blvd' },
+  { id: 'STR005', name: 'Metro Southpark', address: '654 Cedar Ln' },
+]
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" alt="Emergent" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
-
-function App() {
-  return (
-    <div className="App">
-      <Home />
-    </div>
-  );
+const ROLES = {
+  RSM: 'rsm',
+  EMPLOYEE: 'employee',
 }
 
-export default App;
+// ==================== OFFLINE QUEUE HOOK ====================
+function useOfflineQueue() {
+  const [isOnline, setIsOnline] = useState(true)
+  const [queue, setQueue] = useState([])
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine)
+    const handleOnline = () => {
+      setIsOnline(true)
+      syncQueue()
+    }
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    // Load queue from localStorage
+    const savedQueue = localStorage.getItem('offlineQueue')
+    if (savedQueue) setQueue(JSON.parse(savedQueue))
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  const addToQueue = (action) => {
+    const newQueue = [...queue, { ...action, id: Date.now(), timestamp: new Date().toISOString() }]
+    setQueue(newQueue)
+    localStorage.setItem('offlineQueue', JSON.stringify(newQueue))
+    toast.info('Saved offline - will sync when online')
+  }
+
+  const syncQueue = async () => {
+    const savedQueue = JSON.parse(localStorage.getItem('offlineQueue') || '[]')
+    if (savedQueue.length === 0) return
+
+    toast.info(`Syncing ${savedQueue.length} offline items...`)
+    
+    for (const item of savedQueue) {
+      try {
+        // Process each queued transaction
+        if (item.transaction) {
+          await db.transact(item.transaction)
+        }
+      } catch (error) {
+        console.error('Sync error:', error)
+      }
+    }
+
+    localStorage.setItem('offlineQueue', '[]')
+    setQueue([])
+    toast.success('All items synced!')
+  }
+
+  return { isOnline, queue, addToQueue, syncQueue }
+}
+
+// ==================== AUTH COMPONENT ====================
+function AuthScreen({ onAuth }) {
+  const [email, setEmail] = useState('')
+  const [code, setCode] = useState('')
+  const [sentEmail, setSentEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSendCode = async (e) => {
+    e.preventDefault()
+    if (!email) return toast.error('Enter your email')
+    setLoading(true)
+    try {
+      await db.auth.sendMagicCode({ email })
+      setSentEmail(email)
+      toast.success('Magic code sent! Check your email')
+    } catch (error) {
+      toast.error(error.message || 'Failed to send code')
+    }
+    setLoading(false)
+  }
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault()
+    if (!code) return toast.error('Enter the code')
+    setLoading(true)
+    try {
+      await db.auth.signInWithMagicCode({ email: sentEmail, code })
+      toast.success('Signed in!')
+    } catch (error) {
+      toast.error(error.message || 'Invalid code')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="min-h-screen bg-metro-yellow flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo/Brand */}
+        <div className="text-center mb-8">
+          <div className="brutal-card bg-metro-purple inline-block p-4 mb-4">
+            <Store className="w-16 h-16 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold uppercase tracking-tight">Compliance Hub</h1>
+          <p className="text-lg font-medium mt-2">Metro by T-Mobile</p>
+        </div>
+
+        {/* Auth Card */}
+        <div className="brutal-card p-8">
+          <h2 className="text-2xl font-bold mb-6 uppercase">
+            {sentEmail ? 'Enter Code' : 'Sign In'}
+          </h2>
+
+          {!sentEmail ? (
+            <form onSubmit={handleSendCode}>
+              <label className="block text-sm font-bold uppercase mb-2">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@metro.com"
+                className="brutal-input w-full mb-4"
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="brutal-btn w-full bg-metro-purple text-white py-4 text-lg"
+              >
+                {loading ? 'Sending...' : 'Get Magic Code'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyCode}>
+              <p className="text-sm mb-4 bg-muted p-3 brutal-border">
+                Code sent to <strong>{sentEmail}</strong>
+              </p>
+              <label className="block text-sm font-bold uppercase mb-2">Magic Code</label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Enter 6-digit code"
+                className="brutal-input w-full mb-4 text-center text-2xl tracking-widest"
+                disabled={loading}
+                maxLength={6}
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="brutal-btn w-full bg-metro-green text-black py-4 text-lg"
+              >
+                {loading ? 'Verifying...' : 'Verify & Sign In'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSentEmail('')}
+                className="w-full mt-3 text-sm font-bold underline"
+              >
+                Use different email
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ==================== STORE SELECTION MODAL ====================
+function StoreSelectionModal({ onSelectStore, userRole, onSelectRole }) {
+  const [selectedStore, setSelectedStore] = useState(null)
+  const [selectedRole, setSelectedRole] = useState(null)
+
+  const handleContinue = () => {
+    if (!selectedStore || !selectedRole) {
+      return toast.error('Please select a store and role')
+    }
+    onSelectStore(selectedStore)
+    onSelectRole(selectedRole)
+  }
+
+  return (
+    <div className="min-h-screen bg-metro-blue flex items-center justify-center p-4">
+      <div className="w-full max-w-lg">
+        <div className="text-center mb-8">
+          <Building2 className="w-16 h-16 mx-auto text-white mb-4" />
+          <h1 className="text-3xl font-bold text-white uppercase">Select Your Store</h1>
+          <p className="text-white/80 mt-2">Choose your current location to continue</p>
+        </div>
+
+        <div className="brutal-card p-6">
+          {/* Role Selection */}
+          <label className="block text-sm font-bold uppercase mb-3">Your Role</label>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <button
+              onClick={() => setSelectedRole(ROLES.RSM)}
+              className={`brutal-border p-4 text-left transition-all ${
+                selectedRole === ROLES.RSM
+                  ? 'bg-metro-purple text-white brutal-shadow-purple'
+                  : 'bg-white hover:bg-muted brutal-shadow'
+              }`}
+            >
+              <Users className="w-8 h-8 mb-2" />
+              <span className="font-bold block">RSM</span>
+              <span className="text-xs opacity-80">Regional Sales Manager</span>
+            </button>
+            <button
+              onClick={() => setSelectedRole(ROLES.EMPLOYEE)}
+              className={`brutal-border p-4 text-left transition-all ${
+                selectedRole === ROLES.EMPLOYEE
+                  ? 'bg-metro-green text-black brutal-shadow-green'
+                  : 'bg-white hover:bg-muted brutal-shadow'
+              }`}
+            >
+              <UserCheck className="w-8 h-8 mb-2" />
+              <span className="font-bold block">Employee</span>
+              <span className="text-xs opacity-80">Store Staff</span>
+            </button>
+          </div>
+
+          {/* Store Selection */}
+          <label className="block text-sm font-bold uppercase mb-3">Store Location</label>
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {STORES.map((store) => (
+              <button
+                key={store.id}
+                onClick={() => setSelectedStore(store)}
+                className={`brutal-border w-full p-4 text-left flex items-center justify-between transition-all ${
+                  selectedStore?.id === store.id
+                    ? 'bg-metro-yellow brutal-shadow-yellow'
+                    : 'bg-white hover:bg-muted brutal-shadow'
+                }`}
+              >
+                <div>
+                  <span className="font-bold block">{store.name}</span>
+                  <span className="text-sm text-muted-foreground">{store.address}</span>
+                  <span className="text-xs font-mono bg-black text-white px-2 py-0.5 mt-1 inline-block">
+                    {store.id}
+                  </span>
+                </div>
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={handleContinue}
+            disabled={!selectedStore || !selectedRole}
+            className="brutal-btn w-full bg-black text-white py-4 text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Continue to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ==================== DASHBOARD CARD ====================
+function DashboardCard({ title, icon: Icon, color, shadowColor, onClick, disabled, badge }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`brutal-border p-6 text-left w-full transition-all ${color} ${shadowColor} ${
+        disabled ? 'opacity-50 cursor-not-allowed' : 'hover:translate-x-[2px] hover:translate-y-[2px]'
+      }`}
+      style={{ boxShadow: disabled ? 'none' : undefined }}
+    >
+      <div className="flex items-start justify-between">
+        <Icon className="w-12 h-12 mb-4" />
+        {badge && (
+          <span className="bg-metro-red text-white text-xs font-bold px-2 py-1 brutal-border">
+            {badge}
+          </span>
+        )}
+      </div>
+      <h3 className="text-xl font-bold uppercase">{title}</h3>
+    </button>
+  )
+}
+
+// ==================== FORM MODAL BASE ====================
+function FormModal({ isOpen, onClose, title, children, color = 'bg-white' }) {
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className={`brutal-card w-full max-w-2xl max-h-[90vh] overflow-y-auto ${color}`}>
+        <div className="sticky top-0 bg-inherit border-b-[3px] border-black p-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold uppercase">{title}</h2>
+          <button
+            onClick={onClose}
+            className="brutal-btn bg-white p-2"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+// ==================== EMPLOYEE ACTION FORM ====================
+function EmployeeActionForm({ onClose, onSubmit, store }) {
+  const [formData, setFormData] = useState({
+    type: 'incident',
+    employeeName: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit({
+      ...formData,
+      storeId: store.id,
+      storeName: store.name,
+      category: 'employee_action',
+      createdAt: Date.now(),
+    })
+    onClose()
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Action Type</label>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { value: 'incident', label: 'Incident', icon: AlertTriangle, color: 'bg-metro-red' },
+            { value: 'kudos', label: 'Kudos', icon: Award, color: 'bg-metro-green' },
+            { value: 'attendance', label: 'Attendance', icon: Calendar, color: 'bg-metro-blue' },
+          ].map((type) => (
+            <button
+              key={type.value}
+              type="button"
+              onClick={() => setFormData({ ...formData, type: type.value })}
+              className={`brutal-border p-3 flex flex-col items-center gap-2 ${
+                formData.type === type.value ? `${type.color} text-white` : 'bg-white'
+              }`}
+            >
+              <type.icon className="w-6 h-6" />
+              <span className="text-xs font-bold">{type.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Employee Name</label>
+        <input
+          type="text"
+          value={formData.employeeName}
+          onChange={(e) => setFormData({ ...formData, employeeName: e.target.value })}
+          className="brutal-input w-full"
+          placeholder="Enter employee name"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Date</label>
+        <input
+          type="date"
+          value={formData.date}
+          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+          className="brutal-input w-full"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Description</label>
+        <textarea
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          className="brutal-input w-full h-32 resize-none"
+          placeholder="Describe the incident, kudos, or attendance note..."
+          required
+        />
+      </div>
+
+      <button type="submit" className="brutal-btn w-full bg-metro-purple text-white py-4">
+        <Send className="w-5 h-5 inline mr-2" />
+        Submit Employee Action
+      </button>
+    </form>
+  )
+}
+
+// ==================== INVENTORY ACTION FORM ====================
+function InventoryActionForm({ onClose, onSubmit, store, isAudit = false }) {
+  const [formData, setFormData] = useState({
+    type: isAudit ? 'audit' : 'problem',
+    itemName: '',
+    sku: '',
+    quantity: '',
+    problemType: 'damaged',
+    notes: '',
+    photo: null,
+  })
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setFormData({ ...formData, photo: reader.result })
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit({
+      ...formData,
+      storeId: store.id,
+      storeName: store.name,
+      category: 'inventory_action',
+      createdAt: Date.now(),
+    })
+    onClose()
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {!isAudit && (
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2">Problem Type</label>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { value: 'damaged', label: 'Damaged', color: 'bg-metro-red' },
+              { value: 'missing', label: 'Missing', color: 'bg-metro-orange' },
+            ].map((type) => (
+              <button
+                key={type.value}
+                type="button"
+                onClick={() => setFormData({ ...formData, problemType: type.value })}
+                className={`brutal-border p-3 font-bold ${
+                  formData.problemType === type.value ? `${type.color} text-white` : 'bg-white'
+                }`}
+              >
+                {type.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2">Item Name</label>
+          <input
+            type="text"
+            value={formData.itemName}
+            onChange={(e) => setFormData({ ...formData, itemName: e.target.value })}
+            className="brutal-input w-full"
+            placeholder="e.g., iPhone 15 Case"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2">SKU</label>
+          <input
+            type="text"
+            value={formData.sku}
+            onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+            className="brutal-input w-full"
+            placeholder="e.g., SKU-12345"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Quantity</label>
+        <input
+          type="number"
+          value={formData.quantity}
+          onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+          className="brutal-input w-full"
+          placeholder="Enter quantity"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Photo Evidence</label>
+        <div className="brutal-border p-4 bg-muted">
+          {formData.photo ? (
+            <div className="relative">
+              <img src={formData.photo} alt="Evidence" className="w-full h-48 object-cover brutal-border" />
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, photo: null })}
+                className="absolute top-2 right-2 brutal-btn bg-metro-red text-white p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center h-32 cursor-pointer">
+              <Upload className="w-10 h-10 mb-2 text-muted-foreground" />
+              <span className="text-sm font-bold">Click to upload photo</span>
+              <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+            </label>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Notes</label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          className="brutal-input w-full h-24 resize-none"
+          placeholder="Additional details..."
+        />
+      </div>
+
+      <button type="submit" className="brutal-btn w-full bg-metro-blue text-white py-4">
+        <Send className="w-5 h-5 inline mr-2" />
+        {isAudit ? 'Submit Stock Audit' : 'Report Inventory Problem'}
+      </button>
+    </form>
+  )
+}
+
+// ==================== CASH ACTION FORM ====================
+function CashActionForm({ onClose, onSubmit, store, isShortage = false }) {
+  const [formData, setFormData] = useState({
+    type: isShortage ? 'shortage' : 'reconciliation',
+    drawerNumber: '',
+    expectedAmount: '',
+    actualAmount: '',
+    variance: '',
+    notes: '',
+  })
+
+  useEffect(() => {
+    const expected = parseFloat(formData.expectedAmount) || 0
+    const actual = parseFloat(formData.actualAmount) || 0
+    setFormData(prev => ({ ...prev, variance: (actual - expected).toFixed(2) }))
+  }, [formData.expectedAmount, formData.actualAmount])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit({
+      ...formData,
+      storeId: store.id,
+      storeName: store.name,
+      category: 'cash_action',
+      priority: isShortage || parseFloat(formData.variance) < -10 ? 'high' : 'normal',
+      createdAt: Date.now(),
+    })
+    onClose()
+  }
+
+  const variance = parseFloat(formData.variance) || 0
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {isShortage && (
+        <div className="bg-metro-red text-white p-4 brutal-border flex items-center gap-3">
+          <AlertTriangle className="w-8 h-8" />
+          <div>
+            <span className="font-bold block">HIGH PRIORITY ALERT</span>
+            <span className="text-sm">Cash shortage reports require immediate attention</span>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Drawer Number</label>
+        <input
+          type="text"
+          value={formData.drawerNumber}
+          onChange={(e) => setFormData({ ...formData, drawerNumber: e.target.value })}
+          className="brutal-input w-full"
+          placeholder="e.g., Drawer 1"
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2">Expected Amount ($)</label>
+          <input
+            type="number"
+            step="0.01"
+            value={formData.expectedAmount}
+            onChange={(e) => setFormData({ ...formData, expectedAmount: e.target.value })}
+            className="brutal-input w-full"
+            placeholder="0.00"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2">Actual Amount ($)</label>
+          <input
+            type="number"
+            step="0.01"
+            value={formData.actualAmount}
+            onChange={(e) => setFormData({ ...formData, actualAmount: e.target.value })}
+            className="brutal-input w-full"
+            placeholder="0.00"
+            required
+          />
+        </div>
+      </div>
+
+      <div className={`brutal-border p-4 text-center ${
+        variance < 0 ? 'bg-metro-red text-white' : variance > 0 ? 'bg-metro-green' : 'bg-muted'
+      }`}>
+        <span className="text-sm font-bold block uppercase">Variance</span>
+        <span className="text-3xl font-bold">
+          {variance >= 0 ? '+' : ''}${formData.variance || '0.00'}
+        </span>
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Notes</label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          className="brutal-input w-full h-24 resize-none"
+          placeholder="Explain any variance or add notes..."
+          required={variance !== 0}
+        />
+      </div>
+
+      <button 
+        type="submit" 
+        className={`brutal-btn w-full py-4 ${
+          isShortage ? 'bg-metro-red text-white' : 'bg-metro-green text-black'
+        }`}
+      >
+        <Send className="w-5 h-5 inline mr-2" />
+        {isShortage ? 'Report Cash Shortage' : 'Submit Reconciliation'}
+      </button>
+    </form>
+  )
+}
+
+// ==================== STORE ACTION FORM ====================
+function StoreActionForm({ onClose, onSubmit, store, actionType = 'checklist' }) {
+  const checklistItems = actionType === 'checklist' ? [
+    { id: 'displays', label: 'All displays powered on and functioning' },
+    { id: 'signage', label: 'Promotional signage in place' },
+    { id: 'inventory', label: 'Floor inventory stocked' },
+    { id: 'registers', label: 'All registers operational' },
+    { id: 'security', label: 'Security systems armed/disarmed' },
+    { id: 'cleanliness', label: 'Store clean and organized' },
+    { id: 'safe', label: 'Safe secured/opened as needed' },
+    { id: 'lights', label: 'All lights on/off as required' },
+  ] : []
+
+  const [checkedItems, setCheckedItems] = useState({})
+  const [checklistType, setChecklistType] = useState('open')
+  const [maintenanceData, setMaintenanceData] = useState({
+    issue: '',
+    location: '',
+    priority: 'medium',
+    description: '',
+  })
+
+  const toggleItem = (itemId) => {
+    setCheckedItems(prev => ({ ...prev, [itemId]: !prev[itemId] }))
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    
+    if (actionType === 'checklist') {
+      onSubmit({
+        type: 'store_checklist',
+        checklistType,
+        items: checkedItems,
+        completedItems: Object.values(checkedItems).filter(Boolean).length,
+        totalItems: checklistItems.length,
+        storeId: store.id,
+        storeName: store.name,
+        category: 'store_action',
+        timestamp: new Date().toISOString(),
+        createdAt: Date.now(),
+      })
+    } else {
+      onSubmit({
+        type: 'maintenance_request',
+        ...maintenanceData,
+        storeId: store.id,
+        storeName: store.name,
+        category: 'store_action',
+        createdAt: Date.now(),
+      })
+    }
+    onClose()
+  }
+
+  if (actionType === 'maintenance') {
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2">Issue Type</label>
+          <input
+            type="text"
+            value={maintenanceData.issue}
+            onChange={(e) => setMaintenanceData({ ...maintenanceData, issue: e.target.value })}
+            className="brutal-input w-full"
+            placeholder="e.g., HVAC, Electrical, Plumbing"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2">Location in Store</label>
+          <input
+            type="text"
+            value={maintenanceData.location}
+            onChange={(e) => setMaintenanceData({ ...maintenanceData, location: e.target.value })}
+            className="brutal-input w-full"
+            placeholder="e.g., Back office, Sales floor"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2">Priority</label>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { value: 'low', label: 'Low', color: 'bg-metro-green' },
+              { value: 'medium', label: 'Medium', color: 'bg-metro-yellow' },
+              { value: 'high', label: 'High', color: 'bg-metro-red' },
+            ].map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => setMaintenanceData({ ...maintenanceData, priority: p.value })}
+                className={`brutal-border p-3 font-bold ${
+                  maintenanceData.priority === p.value ? `${p.color} ${p.value === 'high' ? 'text-white' : 'text-black'}` : 'bg-white'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2">Description</label>
+          <textarea
+            value={maintenanceData.description}
+            onChange={(e) => setMaintenanceData({ ...maintenanceData, description: e.target.value })}
+            className="brutal-input w-full h-32 resize-none"
+            placeholder="Describe the maintenance issue in detail..."
+            required
+          />
+        </div>
+
+        <button type="submit" className="brutal-btn w-full bg-metro-orange text-black py-4">
+          <Wrench className="w-5 h-5 inline mr-2" />
+          Submit Maintenance Request
+        </button>
+      </form>
+    )
+  }
+
+  const completedCount = Object.values(checkedItems).filter(Boolean).length
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Checklist Type</label>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setChecklistType('open')}
+            className={`brutal-border p-4 flex items-center gap-3 ${
+              checklistType === 'open' ? 'bg-metro-yellow' : 'bg-white'
+            }`}
+          >
+            <Sun className="w-6 h-6" />
+            <span className="font-bold">Opening</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setChecklistType('close')}
+            className={`brutal-border p-4 flex items-center gap-3 ${
+              checklistType === 'close' ? 'bg-metro-purple text-white' : 'bg-white'
+            }`}
+          >
+            <Moon className="w-6 h-6" />
+            <span className="font-bold">Closing</span>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <label className="text-sm font-bold uppercase">Checklist Items</label>
+          <span className="text-sm font-bold bg-black text-white px-2 py-1">
+            {completedCount}/{checklistItems.length}
+          </span>
+        </div>
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {checklistItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => toggleItem(item.id)}
+              className={`brutal-border w-full p-3 flex items-center gap-3 text-left transition-all ${
+                checkedItems[item.id] ? 'bg-metro-green' : 'bg-white'
+              }`}
+            >
+              <div className={`w-6 h-6 brutal-border flex items-center justify-center ${
+                checkedItems[item.id] ? 'bg-black' : 'bg-white'
+              }`}>
+                {checkedItems[item.id] && <CheckCircle className="w-4 h-4 text-white" />}
+              </div>
+              <span className="font-medium">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="brutal-border p-4 bg-muted">
+        <div className="flex items-center gap-2 text-sm">
+          <Clock className="w-4 h-4" />
+          <span>Timestamp: <strong>{new Date().toLocaleString()}</strong></span>
+        </div>
+      </div>
+
+      <button 
+        type="submit" 
+        className="brutal-btn w-full bg-metro-green text-black py-4"
+        disabled={completedCount === 0}
+      >
+        <Clipboard className="w-5 h-5 inline mr-2" />
+        Complete {checklistType === 'open' ? 'Opening' : 'Closing'} Checklist
+      </button>
+    </form>
+  )
+}
+
+// ==================== REPORTS LIST ====================
+function ReportsList({ reports, title }) {
+  if (!reports || reports.length === 0) {
+    return (
+      <div className="brutal-border p-8 text-center bg-muted">
+        <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+        <p className="font-bold">No reports yet</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-lg font-bold uppercase">{title}</h3>
+      {reports.slice(0, 5).map((report) => (
+        <div key={report.id} className="brutal-border p-4 bg-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className={`text-xs font-bold px-2 py-1 ${
+                report.category === 'employee_action' ? 'bg-metro-purple text-white' :
+                report.category === 'inventory_action' ? 'bg-metro-blue text-white' :
+                report.category === 'cash_action' ? 'bg-metro-green text-black' :
+                'bg-metro-yellow text-black'
+              }`}>
+                {report.category?.replace('_', ' ').toUpperCase()}
+              </span>
+              {report.priority === 'high' && (
+                <span className="ml-2 text-xs font-bold px-2 py-1 bg-metro-red text-white">
+                  HIGH PRIORITY
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {new Date(report.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+          <p className="mt-2 font-medium">{report.storeName}</p>
+          {report.description && (
+            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{report.description}</p>
+          )}
+          {report.type && (
+            <span className="text-xs font-mono bg-black text-white px-2 py-0.5 mt-2 inline-block">
+              {report.type}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ==================== MAIN DASHBOARD ====================
+function Dashboard({ user, store, role, onLogout, onChangeStore }) {
+  const { isOnline, queue, addToQueue } = useOfflineQueue()
+  const [activeModal, setActiveModal] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Query reports from InstantDB
+  const { data, isLoading } = db.useQuery({ reports: {} })
+  const reports = data?.reports || []
+
+  // Filter reports for current store (employees) or all (RSM)
+  const filteredReports = role === ROLES.RSM 
+    ? reports 
+    : reports.filter(r => r.storeId === store.id)
+
+  const handleSubmitReport = async (reportData) => {
+    const reportId = id()
+    const transaction = tx.reports[reportId].update({
+      ...reportData,
+      id: reportId,
+      userId: user.id,
+      userEmail: user.email,
+    })
+
+    if (isOnline) {
+      try {
+        await db.transact(transaction)
+        toast.success('Report submitted successfully!')
+      } catch (error) {
+        toast.error('Failed to submit. Saving offline...')
+        addToQueue({ transaction })
+      }
+    } else {
+      addToQueue({ transaction })
+    }
+  }
+
+  const isEmployee = role === ROLES.EMPLOYEE
+
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="brutal-border border-t-0 border-x-0 bg-metro-purple text-white p-4">
+        <div className="container flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="brutal-btn bg-white text-black p-2 lg:hidden"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold uppercase">Compliance Hub</h1>
+              <p className="text-sm opacity-80">Metro by T-Mobile</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {/* Online Status */}
+            <div className={`brutal-border px-3 py-1 text-sm font-bold flex items-center gap-2 ${
+              isOnline ? 'bg-metro-green text-black' : 'bg-metro-red text-white'
+            }`}>
+              {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+              {isOnline ? 'Online' : 'Offline'}
+              {queue.length > 0 && (
+                <span className="ml-1">({queue.length})</span>
+              )}
+            </div>
+
+            {/* Store Info */}
+            <button
+              onClick={onChangeStore}
+              className="brutal-btn bg-white text-black px-3 py-1 text-sm hidden sm:flex items-center gap-2"
+            >
+              <Store className="w-4 h-4" />
+              {store.name}
+            </button>
+
+            {/* Role Badge */}
+            <span className={`brutal-border px-3 py-1 text-sm font-bold hidden sm:block ${
+              role === ROLES.RSM ? 'bg-metro-yellow text-black' : 'bg-white text-black'
+            }`}>
+              {role === ROLES.RSM ? 'RSM' : 'Employee'}
+            </span>
+
+            {/* Logout */}
+            <button
+              onClick={onLogout}
+              className="brutal-btn bg-white text-black p-2"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Sidebar */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}>
+          <div className="brutal-card w-80 h-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b-[3px] border-black flex items-center justify-between">
+              <span className="font-bold">Menu</span>
+              <button onClick={() => setSidebarOpen(false)}>
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="brutal-border p-3 bg-muted">
+                <p className="text-sm font-bold">Store</p>
+                <p>{store.name}</p>
+              </div>
+              <div className="brutal-border p-3 bg-muted">
+                <p className="text-sm font-bold">Role</p>
+                <p>{role === ROLES.RSM ? 'Regional Sales Manager' : 'Store Employee'}</p>
+              </div>
+              <div className="brutal-border p-3 bg-muted">
+                <p className="text-sm font-bold">Email</p>
+                <p className="text-sm">{user.email}</p>
+              </div>
+              <button
+                onClick={onChangeStore}
+                className="brutal-btn w-full bg-metro-blue text-white py-3"
+              >
+                Change Store
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main className="container py-8">
+        {/* Welcome Banner */}
+        <div className="brutal-card bg-metro-yellow p-6 mb-8">
+          <h2 className="text-2xl font-bold">Welcome back!</h2>
+          <p className="text-lg">
+            {store.name} • {role === ROLES.RSM ? 'Regional Sales Manager' : 'Store Employee'}
+          </p>
+        </div>
+
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Employee Action - RSM Only */}
+          <DashboardCard
+            title="Employee Action"
+            icon={Users}
+            color="bg-metro-purple text-white"
+            shadowColor="brutal-shadow-purple"
+            onClick={() => setActiveModal('employee')}
+            disabled={isEmployee}
+            badge={isEmployee ? 'RSM Only' : null}
+          />
+
+          {/* Inventory Action */}
+          <DashboardCard
+            title="Inventory Action"
+            icon={Package}
+            color="bg-metro-blue text-white"
+            shadowColor="brutal-shadow-blue"
+            onClick={() => setActiveModal('inventory')}
+          />
+
+          {/* Cash Action */}
+          <DashboardCard
+            title="Cash Action"
+            icon={DollarSign}
+            color="bg-metro-green text-black"
+            shadowColor="brutal-shadow-green"
+            onClick={() => setActiveModal('cash')}
+          />
+
+          {/* Store Action */}
+          <DashboardCard
+            title="Store Action"
+            icon={Store}
+            color="bg-metro-yellow text-black"
+            shadowColor="brutal-shadow-yellow"
+            onClick={() => setActiveModal('store')}
+          />
+        </div>
+
+        {/* Recent Reports */}
+        <div className="brutal-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold uppercase">Recent Activity</h3>
+            {isLoading && <span className="text-sm text-muted-foreground">Loading...</span>}
+          </div>
+          <ReportsList reports={filteredReports} title="" />
+        </div>
+      </main>
+
+      {/* Modals */}
+      <FormModal
+        isOpen={activeModal === 'employee'}
+        onClose={() => setActiveModal(null)}
+        title="Employee Action"
+        color="bg-metro-purple/10"
+      >
+        <EmployeeActionForm
+          onClose={() => setActiveModal(null)}
+          onSubmit={handleSubmitReport}
+          store={store}
+        />
+      </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'inventory'}
+        onClose={() => setActiveModal(null)}
+        title="Inventory Action"
+        color="bg-metro-blue/10"
+      >
+        <div className="mb-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <button
+              onClick={() => setActiveModal('inventory-problem')}
+              className="brutal-btn bg-metro-red text-white p-4"
+            >
+              <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+              Report Problem
+            </button>
+            <button
+              onClick={() => setActiveModal('inventory-audit')}
+              className="brutal-btn bg-metro-blue text-white p-4"
+            >
+              <Clipboard className="w-8 h-8 mx-auto mb-2" />
+              Stock Audit
+            </button>
+          </div>
+        </div>
+      </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'inventory-problem'}
+        onClose={() => setActiveModal(null)}
+        title="Report Inventory Problem"
+        color="bg-metro-red/10"
+      >
+        <InventoryActionForm
+          onClose={() => setActiveModal(null)}
+          onSubmit={handleSubmitReport}
+          store={store}
+          isAudit={false}
+        />
+      </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'inventory-audit'}
+        onClose={() => setActiveModal(null)}
+        title="Stock Audit"
+        color="bg-metro-blue/10"
+      >
+        <InventoryActionForm
+          onClose={() => setActiveModal(null)}
+          onSubmit={handleSubmitReport}
+          store={store}
+          isAudit={true}
+        />
+      </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'cash'}
+        onClose={() => setActiveModal(null)}
+        title="Cash Action"
+        color="bg-metro-green/10"
+      >
+        <div className="mb-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <button
+              onClick={() => setActiveModal('cash-shortage')}
+              className="brutal-btn bg-metro-red text-white p-4"
+            >
+              <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
+              Cash Shortage
+            </button>
+            <button
+              onClick={() => setActiveModal('cash-reconciliation')}
+              className="brutal-btn bg-metro-green text-black p-4"
+            >
+              <DollarSign className="w-8 h-8 mx-auto mb-2" />
+              Reconciliation
+            </button>
+          </div>
+        </div>
+      </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'cash-shortage'}
+        onClose={() => setActiveModal(null)}
+        title="Report Cash Shortage"
+        color="bg-metro-red/10"
+      >
+        <CashActionForm
+          onClose={() => setActiveModal(null)}
+          onSubmit={handleSubmitReport}
+          store={store}
+          isShortage={true}
+        />
+      </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'cash-reconciliation'}
+        onClose={() => setActiveModal(null)}
+        title="Cash Reconciliation"
+        color="bg-metro-green/10"
+      >
+        <CashActionForm
+          onClose={() => setActiveModal(null)}
+          onSubmit={handleSubmitReport}
+          store={store}
+          isShortage={false}
+        />
+      </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'store'}
+        onClose={() => setActiveModal(null)}
+        title="Store Action"
+        color="bg-metro-yellow/10"
+      >
+        <div className="mb-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <button
+              onClick={() => setActiveModal('store-checklist')}
+              className="brutal-btn bg-metro-yellow text-black p-4"
+            >
+              <Clipboard className="w-8 h-8 mx-auto mb-2" />
+              Open/Close Checklist
+            </button>
+            <button
+              onClick={() => setActiveModal('store-maintenance')}
+              className="brutal-btn bg-metro-orange text-black p-4"
+            >
+              <Wrench className="w-8 h-8 mx-auto mb-2" />
+              Maintenance Request
+            </button>
+          </div>
+        </div>
+      </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'store-checklist'}
+        onClose={() => setActiveModal(null)}
+        title="Store Checklist"
+        color="bg-metro-yellow/10"
+      >
+        <StoreActionForm
+          onClose={() => setActiveModal(null)}
+          onSubmit={handleSubmitReport}
+          store={store}
+          actionType="checklist"
+        />
+      </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'store-maintenance'}
+        onClose={() => setActiveModal(null)}
+        title="Maintenance Request"
+        color="bg-metro-orange/10"
+      >
+        <StoreActionForm
+          onClose={() => setActiveModal(null)}
+          onSubmit={handleSubmitReport}
+          store={store}
+          actionType="maintenance"
+        />
+      </FormModal>
+    </div>
+  )
+}
+
+// ==================== MAIN APP ====================
+export default function App() {
+  const { isLoading, user, error } = db.useAuth()
+  const [selectedStore, setSelectedStore] = useState(null)
+  const [selectedRole, setSelectedRole] = useState(null)
+
+  // Load stored preferences
+  useEffect(() => {
+    const storedStore = localStorage.getItem('selectedStore')
+    const storedRole = localStorage.getItem('selectedRole')
+    if (storedStore) setSelectedStore(JSON.parse(storedStore))
+    if (storedRole) setSelectedRole(storedRole)
+  }, [])
+
+  // Save preferences
+  useEffect(() => {
+    if (selectedStore) localStorage.setItem('selectedStore', JSON.stringify(selectedStore))
+    if (selectedRole) localStorage.setItem('selectedRole', selectedRole)
+  }, [selectedStore, selectedRole])
+
+  const handleLogout = async () => {
+    await db.auth.signOut()
+    setSelectedStore(null)
+    setSelectedRole(null)
+    localStorage.removeItem('selectedStore')
+    localStorage.removeItem('selectedRole')
+    toast.success('Signed out')
+  }
+
+  const handleChangeStore = () => {
+    setSelectedStore(null)
+    setSelectedRole(null)
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-metro-purple flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="brutal-card bg-white p-8 inline-block mb-4">
+            <Store className="w-16 h-16 animate-pulse" />
+          </div>
+          <p className="text-xl font-bold">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Not authenticated
+  if (!user) {
+    return <AuthScreen />
+  }
+
+  // Store not selected
+  if (!selectedStore || !selectedRole) {
+    return (
+      <StoreSelectionModal
+        onSelectStore={setSelectedStore}
+        onSelectRole={setSelectedRole}
+      />
+    )
+  }
+
+  // Dashboard
+  return (
+    <Dashboard
+      user={user}
+      store={selectedStore}
+      role={selectedRole}
+      onLogout={handleLogout}
+      onChangeStore={handleChangeStore}
+    />
+  )
+}
