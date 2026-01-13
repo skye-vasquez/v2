@@ -1108,26 +1108,31 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="brutal-border border-t-0 border-x-0 bg-metro-red text-white p-4">
-        <div className="container flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={onBackToDashboard} className="brutal-btn bg-white text-black p-2">
-              <ArrowLeft className="w-6 h-6" />
+      <header className="brutal-border border-t-0 border-x-0 bg-metro-red text-white p-3 sm:p-4">
+        <div className="container">
+          {/* Top row - back button and title */}
+          <div className="flex items-center gap-3 mb-2 sm:mb-0">
+            <button onClick={onBackToDashboard} className="brutal-btn bg-white text-black p-2 flex-shrink-0">
+              <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
-            <div>
-              <h1 className="text-xl font-bold uppercase flex items-center gap-2">
-                <Shield className="w-6 h-6" />
-                Admin Dashboard
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold uppercase flex items-center gap-2">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+                <span className="truncate">Admin Dashboard</span>
               </h1>
-              <p className="text-sm opacity-80">Compliance Hub Management</p>
+              <p className="text-xs sm:text-sm opacity-80 hidden sm:block">Compliance Hub Management</p>
             </div>
+            <button onClick={onLogout} className="brutal-btn bg-white text-black p-2 flex-shrink-0 sm:hidden">
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
           
-          <div className="flex items-center gap-3">
-            <span className="brutal-border bg-white text-black px-3 py-1 text-sm font-bold">
+          {/* Bottom row on mobile - email and logout */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 mt-2 sm:mt-0 sm:absolute sm:right-4 sm:top-4">
+            <span className="brutal-border bg-white text-black px-2 sm:px-3 py-1 text-xs sm:text-sm font-bold truncate max-w-[200px] sm:max-w-none">
               {user.email}
             </span>
-            <button onClick={onLogout} className="brutal-btn bg-white text-black p-2">
+            <button onClick={onLogout} className="brutal-btn bg-white text-black p-2 hidden sm:block">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
@@ -1135,17 +1140,17 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
       </header>
 
       {/* Tabs */}
-      <div className="container py-4">
-        <div className="flex gap-2 flex-wrap">
+      <div className="container py-3 sm:py-4 px-3 sm:px-4">
+        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap">
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
-            { id: 'reports', label: 'All Reports', icon: FileText },
-            { id: 'users', label: 'User Management', icon: Users },
+            { id: 'reports', label: 'Reports', icon: FileText },
+            { id: 'users', label: 'Users', icon: Users },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`brutal-btn px-4 py-2 flex items-center gap-2 ${
+              className={`brutal-btn px-3 sm:px-4 py-2 flex items-center gap-2 whitespace-nowrap text-sm sm:text-base flex-shrink-0 ${
                 activeTab === tab.id ? 'bg-black text-white' : 'bg-white text-black'
               }`}
             >
@@ -1157,7 +1162,7 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
       </div>
 
       {/* Content */}
-      <main className="container pb-8">
+      <main className="container pb-8 px-3 sm:px-4">
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Stats Grid */}
