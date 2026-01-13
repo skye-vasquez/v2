@@ -34,11 +34,12 @@ import {
 
 // ==================== CONSTANTS ====================
 const STORES = [
-  { id: 'STR001', name: 'Metro Downtown', address: '123 Main St' },
-  { id: 'STR002', name: 'Metro Eastside', address: '456 Oak Ave' },
-  { id: 'STR003', name: 'Metro Westfield', address: '789 Pine Rd' },
-  { id: 'STR004', name: 'Metro Northgate', address: '321 Elm Blvd' },
-  { id: 'STR005', name: 'Metro Southpark', address: '654 Cedar Ln' },
+  { id: 'NCF-001', name: 'Archer', address: 'Archer, FL' },
+  { id: 'NCF-002', name: 'Newberry', address: 'Newberry, FL' },
+  { id: 'NCF-003', name: 'Chiefland', address: 'Chiefland, FL' },
+  { id: 'NCF-004', name: 'Inverness', address: 'Inverness, FL' },
+  { id: 'NCF-005', name: 'Homosassa', address: 'Homosassa, FL' },
+  { id: 'NCF-006', name: 'Crystal River', address: 'Crystal River, FL' },
 ]
 
 const ROLES = {
