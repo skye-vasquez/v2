@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#8B5CF6"/>
+  <rect x="128" y="128" width="256" height="256" fill="white" stroke="black" stroke-width="16"/>
+  <text x="256" y="280" font-family="Arial Black" font-size="72" text-anchor="middle" fill="black">CH</text>
+</svg>
