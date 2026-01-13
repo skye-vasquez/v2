@@ -1177,54 +1177,54 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
               </div>
               <div className="brutal-card p-4 bg-metro-blue">
                 <p className="text-sm font-bold uppercase text-black">Total Users</p>
-                <p className="text-4xl font-bold text-black">{stats.totalUsers}</p>
+                <p className="text-3xl sm:text-4xl font-bold text-black">{stats.totalUsers}</p>
               </div>
-              <div className="brutal-card p-4 bg-metro-green">
-                <p className="text-sm font-bold uppercase text-black">Stores</p>
-                <p className="text-4xl font-bold text-black">{STORES.length}</p>
+              <div className="brutal-card p-3 sm:p-4 bg-metro-green">
+                <p className="text-xs sm:text-sm font-bold uppercase text-black">Stores</p>
+                <p className="text-3xl sm:text-4xl font-bold text-black">{STORES.length}</p>
               </div>
             </div>
 
             {/* Category Breakdown */}
-            <div className="brutal-card p-6">
-              <h3 className="text-lg font-bold uppercase mb-4">Reports by Category</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="brutal-border p-4 bg-metro-purple/10">
-                  <Users className="w-8 h-8 mb-2 text-metro-purple" />
-                  <p className="text-2xl font-bold">{stats.byCategory.employee}</p>
-                  <p className="text-sm">Employee Actions</p>
+            <div className="brutal-card p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-bold uppercase mb-4">Reports by Category</h3>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="brutal-border p-3 sm:p-4 bg-metro-purple/10">
+                  <Users className="w-6 h-6 sm:w-8 sm:h-8 mb-2 text-metro-purple" />
+                  <p className="text-xl sm:text-2xl font-bold">{stats.byCategory.employee}</p>
+                  <p className="text-xs sm:text-sm">Employee</p>
                 </div>
-                <div className="brutal-border p-4 bg-metro-blue/10">
-                  <Package className="w-8 h-8 mb-2 text-metro-blue" />
-                  <p className="text-2xl font-bold">{stats.byCategory.inventory}</p>
-                  <p className="text-sm">Inventory Actions</p>
+                <div className="brutal-border p-3 sm:p-4 bg-metro-blue/10">
+                  <Package className="w-6 h-6 sm:w-8 sm:h-8 mb-2 text-metro-blue" />
+                  <p className="text-xl sm:text-2xl font-bold">{stats.byCategory.inventory}</p>
+                  <p className="text-xs sm:text-sm">Inventory</p>
                 </div>
-                <div className="brutal-border p-4 bg-metro-green/10">
-                  <DollarSign className="w-8 h-8 mb-2 text-metro-green" />
-                  <p className="text-2xl font-bold">{stats.byCategory.cash}</p>
-                  <p className="text-sm">Cash Actions</p>
+                <div className="brutal-border p-3 sm:p-4 bg-metro-green/10">
+                  <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 mb-2 text-metro-green" />
+                  <p className="text-xl sm:text-2xl font-bold">{stats.byCategory.cash}</p>
+                  <p className="text-xs sm:text-sm">Cash</p>
                 </div>
-                <div className="brutal-border p-4 bg-metro-yellow/10">
-                  <Store className="w-8 h-8 mb-2 text-metro-orange" />
-                  <p className="text-2xl font-bold">{stats.byCategory.store}</p>
-                  <p className="text-sm">Store Actions</p>
+                <div className="brutal-border p-3 sm:p-4 bg-metro-yellow/10">
+                  <Store className="w-6 h-6 sm:w-8 sm:h-8 mb-2 text-metro-orange" />
+                  <p className="text-xl sm:text-2xl font-bold">{stats.byCategory.store}</p>
+                  <p className="text-xs sm:text-sm">Store</p>
                 </div>
               </div>
             </div>
 
             {/* Store Breakdown */}
-            <div className="brutal-card p-6">
-              <h3 className="text-lg font-bold uppercase mb-4">Reports by Store</h3>
+            <div className="brutal-card p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-bold uppercase mb-4">Reports by Store</h3>
               <div className="space-y-2">
                 {STORES.map((store) => (
-                  <div key={store.id} className="brutal-border p-3 flex items-center justify-between">
-                    <div>
-                      <span className="font-bold">{store.name}</span>
-                      <span className="text-xs font-mono ml-2 bg-black text-white px-2 py-0.5">
+                  <div key={store.id} className="brutal-border p-2 sm:p-3 flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-bold text-sm sm:text-base block truncate">{store.name}</span>
+                      <span className="text-xs font-mono bg-black text-white px-1 sm:px-2 py-0.5">
                         {store.id}
                       </span>
                     </div>
-                    <span className="text-2xl font-bold">{stats.byStore[store.id] || 0}</span>
+                    <span className="text-xl sm:text-2xl font-bold ml-2 flex-shrink-0">{stats.byStore[store.id] || 0}</span>
                   </div>
                 ))}
               </div>
@@ -1233,21 +1233,21 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
         )}
 
         {activeTab === 'reports' && (
-          <div className="brutal-card p-6">
-            <h3 className="text-lg font-bold uppercase mb-4">All Submissions ({reports.length})</h3>
+          <div className="brutal-card p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-bold uppercase mb-4">All Submissions ({reports.length})</h3>
             <ReportsList reports={reports.sort((a, b) => b.createdAt - a.createdAt)} />
           </div>
         )}
 
         {activeTab === 'users' && (
-          <div className="brutal-card p-6">
+          <div className="brutal-card p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold uppercase">User Management ({users.length})</h3>
+              <h3 className="text-base sm:text-lg font-bold uppercase">Users ({users.length})</h3>
             </div>
             
             {users.length === 0 ? (
-              <div className="brutal-border p-8 text-center bg-muted">
-                <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+              <div className="brutal-border p-6 sm:p-8 text-center bg-muted">
+                <Users className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground" />
                 <p className="font-bold">No users yet</p>
                 <p className="text-sm text-muted-foreground">Users will appear here after they sign in</p>
               </div>
