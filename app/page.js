@@ -158,12 +158,11 @@ function AuthScreen({ onAuth }) {
       <div className="w-full max-w-md">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <div className="brutal-card bg-white inline-block p-6 mb-4">
-            <img 
-              src="https://customer-assets.emergentagent.com/job_bd421fb0-7d25-4dd9-8521-a7ae28926344/artifacts/27spos3h_CleanShot%202026-01-13%20at%2014.44.25.png" 
-              alt="Metro by T-Mobile" 
-              className="w-24 h-24 object-contain"
-            />
+          <div className="inline-block mb-4">
+            <div className="relative">
+              <Shield className="w-24 h-24 text-black" strokeWidth={2.5} />
+              <CheckCircle className="w-10 h-10 text-metro-purple absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" strokeWidth={3} />
+            </div>
           </div>
           <h1 className="text-4xl font-bold uppercase tracking-tight">Compliance Hub</h1>
           <p className="text-lg font-medium mt-2">Metro by T-Mobile</p>
@@ -182,7 +181,7 @@ function AuthScreen({ onAuth }) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@metro.com"
+                placeholder="user@example.com"
                 className="brutal-input w-full mb-4"
                 disabled={loading}
               />
