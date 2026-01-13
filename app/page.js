@@ -1062,21 +1062,21 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
           <div className="space-y-6">
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="brutal-card p-4 bg-metro-purple text-white">
-                <p className="text-sm font-bold uppercase">Total Reports</p>
-                <p className="text-4xl font-bold">{stats.totalReports}</p>
+              <div className="brutal-card p-4 bg-metro-purple">
+                <p className="text-sm font-bold uppercase text-white">Total Reports</p>
+                <p className="text-4xl font-bold text-white">{stats.totalReports}</p>
               </div>
-              <div className="brutal-card p-4 bg-metro-red text-white">
-                <p className="text-sm font-bold uppercase">High Priority</p>
-                <p className="text-4xl font-bold">{stats.highPriority}</p>
+              <div className="brutal-card p-4 bg-metro-red">
+                <p className="text-sm font-bold uppercase text-white">High Priority</p>
+                <p className="text-4xl font-bold text-white">{stats.highPriority}</p>
               </div>
-              <div className="brutal-card p-4 bg-metro-blue text-white">
-                <p className="text-sm font-bold uppercase">Total Users</p>
-                <p className="text-4xl font-bold">{stats.totalUsers}</p>
+              <div className="brutal-card p-4 bg-metro-blue">
+                <p className="text-sm font-bold uppercase text-white">Total Users</p>
+                <p className="text-4xl font-bold text-white">{stats.totalUsers}</p>
               </div>
-              <div className="brutal-card p-4 bg-metro-green text-black">
-                <p className="text-sm font-bold uppercase">Stores</p>
-                <p className="text-4xl font-bold">{STORES.length}</p>
+              <div className="brutal-card p-4 bg-metro-green">
+                <p className="text-sm font-bold uppercase text-black">Stores</p>
+                <p className="text-4xl font-bold text-black">{STORES.length}</p>
               </div>
             </div>
 
