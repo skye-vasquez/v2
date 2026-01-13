@@ -144,8 +144,12 @@ function AuthScreen({ onAuth }) {
       <div className="w-full max-w-md">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <div className="brutal-card bg-metro-purple inline-block p-4 mb-4">
-            <Store className="w-16 h-16 text-white" />
+          <div className="brutal-card bg-white inline-block p-4 mb-4">
+            <img 
+              src="https://customer-assets.emergentagent.com/job_bd421fb0-7d25-4dd9-8521-a7ae28926344/artifacts/27spos3h_CleanShot%202026-01-13%20at%2014.44.25.png" 
+              alt="Metro by T-Mobile" 
+              className="w-16 h-16 object-contain"
+            />
           </div>
           <h1 className="text-4xl font-bold uppercase tracking-tight">Compliance Hub</h1>
           <p className="text-lg font-medium mt-2">Metro by T-Mobile</p>
