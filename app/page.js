@@ -1390,6 +1390,7 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'reports', label: 'Reports', icon: FileText },
+            { id: 'insights', label: 'Insights', icon: Eye },
             { id: 'users', label: 'Users', icon: Users },
           ].map((tab) => (
             <button
@@ -1411,7 +1412,7 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
         {activeTab === 'overview' && (
           <div className="space-y-4 sm:space-y-6">
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <div className="brutal-card p-3 sm:p-4 bg-metro-purple">
                 <p className="text-xs sm:text-sm font-bold uppercase text-black">Total Reports</p>
                 <p className="text-3xl sm:text-4xl font-bold text-black">{stats.totalReports}</p>
@@ -1420,14 +1421,29 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
                 <p className="text-xs sm:text-sm font-bold uppercase text-black">High Priority</p>
                 <p className="text-3xl sm:text-4xl font-bold text-black">{stats.highPriority}</p>
               </div>
+              <div className="brutal-card p-3 sm:p-4 bg-metro-yellow">
+                <p className="text-xs sm:text-sm font-bold uppercase text-black">Today</p>
+                <p className="text-3xl sm:text-4xl font-bold text-black">{stats.todayReports}</p>
+              </div>
+              <div className="brutal-card p-3 sm:p-4 bg-metro-green">
+                <p className="text-xs sm:text-sm font-bold uppercase text-black">This Week</p>
+                <p className="text-3xl sm:text-4xl font-bold text-black">{stats.weekReports}</p>
+              </div>
+            </div>
+
+            {/* Quick Stats Row */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div className="brutal-card p-3 sm:p-4 bg-metro-blue">
                 <p className="text-xs sm:text-sm font-bold uppercase text-black">Total Users</p>
                 <p className="text-3xl sm:text-4xl font-bold text-black">{stats.totalUsers}</p>
               </div>
-              <div className="brutal-card p-3 sm:p-4 bg-metro-green">
-                <p className="text-xs sm:text-sm font-bold uppercase text-black">Stores</p>
-                <p className="text-3xl sm:text-4xl font-bold text-black">{STORES.length}</p>
+              <div className={`brutal-card p-3 sm:p-4 ${stats.cashVariance < 0 ? 'bg-metro-red' : 'bg-metro-green'}`}>
+                <p className="text-xs sm:text-sm font-bold uppercase text-black">Cash Variance</p>
+                <p className="text-2xl sm:text-3xl font-bold text-black">
+                  {stats.cashVariance >= 0 ? '+' : ''}${stats.cashVariance.toFixed(2)}
+                </p>
               </div>
+            </div>
             </div>
 
             {/* Category Breakdown */}
