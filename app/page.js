@@ -75,8 +75,10 @@ const ROLE_LABELS = {
 function useOfflineQueue() {
   const [isOnline, setIsOnline] = useState(true)
   const [queue, setQueue] = useState([])
+  const [isMounted, setIsMounted] = useState(false)
 
   const syncQueue = async () => {
+    if (typeof window === 'undefined') return
     const savedQueue = JSON.parse(localStorage.getItem('offlineQueue') || '[]')
     if (savedQueue.length === 0) return
 
@@ -98,6 +100,10 @@ function useOfflineQueue() {
   }
 
   useEffect(() => {
+    setIsMounted(true)
+    
+    if (typeof window === 'undefined') return
+
     setIsOnline(navigator.onLine)
     const handleOnline = () => {
       setIsOnline(true)
@@ -118,6 +124,7 @@ function useOfflineQueue() {
   }, [])
 
   const addToQueue = (action) => {
+    if (typeof window === 'undefined') return
     const newQueue = [...queue, { ...action, id: Date.now(), timestamp: new Date().toISOString() }]
     setQueue(newQueue)
     localStorage.setItem('offlineQueue', JSON.stringify(newQueue))
@@ -1453,6 +1460,8 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
   }
 
   const exportReportsCSV = () => {
+    if (typeof window === 'undefined') return
+    
     const headers = ['Date', 'Store', 'Category', 'Type', 'Submitted By', 'Details']
     const rows = filteredReports.map(r => [
       new Date(r.createdAt).toLocaleString(),
@@ -2656,12 +2665,14 @@ export default function App() {
 
   // Load stored store preference
   useEffect(() => {
+    if (typeof window === 'undefined') return
     const storedStore = localStorage.getItem('selectedStore')
     if (storedStore) setSelectedStore(JSON.parse(storedStore))
   }, [])
 
   // Save store preference
   useEffect(() => {
+    if (typeof window === 'undefined') return
     if (selectedStore) localStorage.setItem('selectedStore', JSON.stringify(selectedStore))
   }, [selectedStore])
 
@@ -2669,7 +2680,9 @@ export default function App() {
     await db.auth.signOut()
     setSelectedStore(null)
     setUserProfile(null)
-    localStorage.removeItem('selectedStore')
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('selectedStore')
+    }
     toast.success('Signed out')
   }
 
