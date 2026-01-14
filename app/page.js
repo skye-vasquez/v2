@@ -1849,45 +1849,8 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
     </div>
   )
 }
-                            className="brutal-input text-sm py-1"
-                            defaultValue={u.role}
-                            onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                          >
-                            <option value={ROLES.EMPLOYEE}>Employee</option>
-                            <option value={ROLES.RSM}>RSM</option>
-                            <option value={ROLES.ADMIN}>Admin</option>
-                          </select>
-                          <button
-                            onClick={() => setEditingUser(null)}
-                            className="brutal-btn bg-muted p-2"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => setEditingUser(u.id)}
-                            className="brutal-btn bg-metro-blue text-white p-2"
-                            title="Edit Role"
-                          >
-                            <UserCog className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(u.id)}
-                            className="brutal-btn bg-metro-red text-white p-2"
-                            title="Delete User"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+
+// ==================== MAIN DASHBOARD ====================
         )}
       </main>
     </div>
