@@ -2044,6 +2044,28 @@ function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
     }
   }
 
+  const handleSubmitFeedback = async (feedbackData) => {
+    const feedbackId = id()
+    const transaction = tx.feedback[feedbackId].update({
+      ...feedbackData,
+      id: feedbackId,
+      userId: user.id,
+      userEmail: feedbackData.anonymous ? 'Anonymous' : user.email,
+    })
+
+    if (isOnline) {
+      try {
+        await db.transact(transaction)
+        toast.success('Feedback submitted successfully! Thank you for your input.')
+      } catch (error) {
+        toast.error('Failed to submit. Saving offline...')
+        addToQueue({ transaction })
+      }
+    } else {
+      addToQueue({ transaction })
+    }
+  }
+
   const isEmployee = role === ROLES.EMPLOYEE
   const isAdmin = role === ROLES.ADMIN
 
