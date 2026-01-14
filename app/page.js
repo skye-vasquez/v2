@@ -1335,10 +1335,24 @@ function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
   const { data, isLoading } = db.useQuery({ reports: {} })
   const reports = data?.reports || []
 
-  // Filter reports for current store (employees) or all (RSM/Admin)
-  const filteredReports = role === ROLES.ADMIN || role === ROLES.RSM
-    ? reports 
-    : reports.filter(r => r.storeId === store.id)
+  // Filter reports for the dashboard's Recent Activity
+  // 1. Always filter by current store (everyone sees only their store's activity)
+  // 2. Employee Actions are only visible to the submitter or admins
+  const filteredReports = reports.filter(r => {
+    // Must be from the current store
+    if (r.storeId !== store.id) return false
+    
+    // Employee Actions are restricted
+    if (r.category === 'employee_action') {
+      // Only admins or the person who submitted it can see it
+      if (role === ROLES.ADMIN) return true
+      if (r.userEmail === user.email) return true
+      return false
+    }
+    
+    // All other reports are visible to everyone at that store
+    return true
+  })
 
   const handleSubmitReport = async (reportData) => {
     const reportId = id()
