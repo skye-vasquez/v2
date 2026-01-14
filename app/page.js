@@ -1433,6 +1433,25 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
     }
   }
 
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (!confirm('Are you sure you want to delete this feedback?')) return
+    try {
+      await db.transact(tx.feedback[feedbackId].delete())
+      toast.success('Feedback deleted')
+    } catch (error) {
+      toast.error('Failed to delete feedback')
+    }
+  }
+
+  const handleUpdateFeedbackStatus = async (feedbackId, status) => {
+    try {
+      await db.transact(tx.feedback[feedbackId].update({ status, updatedAt: Date.now() }))
+      toast.success(`Feedback marked as ${status}`)
+    } catch (error) {
+      toast.error('Failed to update status')
+    }
+  }
+
   const exportReportsCSV = () => {
     const headers = ['Date', 'Store', 'Category', 'Type', 'Submitted By', 'Details']
     const rows = filteredReports.map(r => [
