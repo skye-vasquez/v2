@@ -1806,6 +1806,117 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
           </div>
         )}
 
+        {activeTab === 'feedback' && (
+          <div className="space-y-4">
+            {/* Feedback Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="brutal-card p-3 bg-metro-blue">
+                <p className="text-xs font-bold uppercase text-black">Feature Ideas</p>
+                <p className="text-2xl font-bold text-black">{feedbackList.filter(f => f.type === 'feature').length}</p>
+              </div>
+              <div className="brutal-card p-3 bg-metro-red">
+                <p className="text-xs font-bold uppercase text-black">Grievances</p>
+                <p className="text-2xl font-bold text-black">{feedbackList.filter(f => f.type === 'grievance').length}</p>
+              </div>
+              <div className="brutal-card p-3 bg-metro-yellow">
+                <p className="text-xs font-bold uppercase text-black">Pending</p>
+                <p className="text-2xl font-bold text-black">{feedbackList.filter(f => f.status === 'pending' || !f.status).length}</p>
+              </div>
+              <div className="brutal-card p-3 bg-metro-green">
+                <p className="text-xs font-bold uppercase text-black">Resolved</p>
+                <p className="text-2xl font-bold text-black">{feedbackList.filter(f => f.status === 'resolved').length}</p>
+              </div>
+            </div>
+
+            {/* Feedback List */}
+            <div className="brutal-card p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-bold uppercase mb-4">
+                All Feedback ({feedbackList.length})
+              </h3>
+              
+              {feedbackList.length === 0 ? (
+                <div className="brutal-border p-8 text-center bg-muted">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                  <p className="font-bold">No feedback submitted yet</p>
+                  <p className="text-sm text-muted-foreground">Feature ideas and grievances will appear here</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {feedbackList.sort((a, b) => b.createdAt - a.createdAt).map((feedback) => (
+                    <div key={feedback.id} className="brutal-border p-4 bg-white">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className={`text-xs font-bold px-2 py-1 ${
+                              feedback.type === 'feature' ? 'bg-metro-blue text-white' : 'bg-metro-red text-white'
+                            }`}>
+                              {feedback.type === 'feature' ? '💡 Feature Idea' : '📢 Grievance'}
+                            </span>
+                            <span className={`text-xs font-bold px-2 py-1 ${
+                              feedback.priority === 'high' ? 'bg-metro-red text-white' :
+                              feedback.priority === 'medium' ? 'bg-metro-yellow text-black' :
+                              'bg-metro-green text-black'
+                            }`}>
+                              {feedback.priority?.toUpperCase() || 'MEDIUM'}
+                            </span>
+                            <span className={`text-xs font-bold px-2 py-1 ${
+                              feedback.status === 'resolved' ? 'bg-metro-green text-black' :
+                              feedback.status === 'in_progress' ? 'bg-metro-blue text-white' :
+                              feedback.status === 'rejected' ? 'bg-gray-500 text-white' :
+                              'bg-metro-yellow text-black'
+                            }`}>
+                              {feedback.status?.replace('_', ' ').toUpperCase() || 'PENDING'}
+                            </span>
+                          </div>
+                          
+                          <h4 className="font-bold text-lg">{feedback.title}</h4>
+                          <p className="text-sm text-muted-foreground mt-1">{feedback.description}</p>
+                          
+                          <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Store className="w-3 h-3" />
+                              {feedback.storeName}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <UserCheck className="w-3 h-3" />
+                              {feedback.submitterEmail || feedback.userEmail || 'Anonymous'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {new Date(feedback.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2">
+                          {/* Status Actions */}
+                          <select
+                            value={feedback.status || 'pending'}
+                            onChange={(e) => handleUpdateFeedbackStatus(feedback.id, e.target.value)}
+                            className="brutal-input text-xs py-1 px-2"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
+                          <button
+                            onClick={() => handleDeleteFeedback(feedback.id)}
+                            className="brutal-btn bg-metro-red text-white p-2"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'insights' && (
           <div className="space-y-4 sm:space-y-6">
             {/* Top Submitters */}
