@@ -1010,6 +1010,141 @@ function StoreActionForm({ onClose, onSubmit, store, actionType = 'checklist' })
   )
 }
 
+// ==================== FEEDBACK FORM ====================
+function FeedbackForm({ onClose, onSubmit, store, user }) {
+  const [formData, setFormData] = useState({
+    type: 'feature',
+    title: '',
+    description: '',
+    priority: 'medium',
+    anonymous: false,
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit({
+      ...formData,
+      storeId: store.id,
+      storeName: store.name,
+      category: 'feedback',
+      submitterEmail: formData.anonymous ? 'Anonymous' : user.email,
+      status: 'pending',
+      createdAt: Date.now(),
+    })
+    onClose()
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Feedback Type</label>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setFormData({ ...formData, type: 'feature' })}
+            className={`brutal-border p-4 flex flex-col items-center gap-2 ${
+              formData.type === 'feature' ? 'bg-metro-blue text-white' : 'bg-white'
+            }`}
+          >
+            <Lightbulb className="w-8 h-8" />
+            <span className="font-bold">Feature Idea</span>
+            <span className="text-xs opacity-80">Suggest improvements</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormData({ ...formData, type: 'grievance' })}
+            className={`brutal-border p-4 flex flex-col items-center gap-2 ${
+              formData.type === 'grievance' ? 'bg-metro-red text-white' : 'bg-white'
+            }`}
+          >
+            <MessageSquare className="w-8 h-8" />
+            <span className="font-bold">Grievance</span>
+            <span className="text-xs opacity-80">Report an issue</span>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Title</label>
+        <input
+          type="text"
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          className="brutal-input w-full"
+          placeholder={formData.type === 'feature' ? 'e.g., Add dark mode' : 'e.g., Schedule conflict'}
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">
+          {formData.type === 'feature' ? 'Describe your idea' : 'Describe your concern'}
+        </label>
+        <textarea
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          className="brutal-input w-full h-32 resize-none"
+          placeholder={
+            formData.type === 'feature' 
+              ? 'Explain the feature and how it would help...' 
+              : 'Please provide details about your grievance...'
+          }
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Priority</label>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { value: 'low', label: 'Low', color: 'bg-metro-green' },
+            { value: 'medium', label: 'Medium', color: 'bg-metro-yellow' },
+            { value: 'high', label: 'High', color: 'bg-metro-red' },
+          ].map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() => setFormData({ ...formData, priority: p.value })}
+              className={`brutal-border p-2 font-bold text-sm ${
+                formData.priority === p.value ? `${p.color} ${p.value === 'high' ? 'text-white' : 'text-black'}` : 'bg-white'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {formData.type === 'grievance' && (
+        <div className="brutal-border p-4 bg-muted">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.anonymous}
+              onChange={(e) => setFormData({ ...formData, anonymous: e.target.checked })}
+              className="w-5 h-5 brutal-border"
+            />
+            <div>
+              <span className="font-bold block">Submit Anonymously</span>
+              <span className="text-xs text-muted-foreground">Your identity will not be shared with management</span>
+            </div>
+          </label>
+        </div>
+      )}
+
+      <button 
+        type="submit" 
+        className={`brutal-btn w-full py-4 ${
+          formData.type === 'feature' ? 'bg-metro-blue text-white' : 'bg-metro-red text-white'
+        }`}
+      >
+        <Send className="w-5 h-5 inline mr-2" />
+        Submit {formData.type === 'feature' ? 'Feature Idea' : 'Grievance'}
+      </button>
+    </form>
+  )
+}
+
 // ==================== REPORTS LIST ====================
 function ReportsList({ reports, title, showStore = true }) {
   if (!reports || reports.length === 0) {
