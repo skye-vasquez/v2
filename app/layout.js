@@ -5,17 +5,18 @@ export const metadata = {
   title: 'Compliance Hub | Metro by T-Mobile',
   description: 'Retail Compliance Management PWA',
   manifest: '/manifest.json',
-  themeColor: '#8B5CF6',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Compliance Hub',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#8B5CF6',
 }
 
 export default function RootLayout({ children }) {
