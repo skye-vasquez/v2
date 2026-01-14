@@ -2051,8 +2051,12 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
                   <div key={u.id} className="brutal-border p-4 bg-white">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold truncate">{u.odEmail || u.email}</p>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                        {/* Email prominently displayed */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <MessageCircle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <p className="font-bold text-sm sm:text-base break-all">{u.odEmail || u.email || 'No email'}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className={`text-xs font-bold px-2 py-1 ${
                             u.role === ROLES.ADMIN ? 'bg-metro-red text-white' :
                             u.role === ROLES.RSM ? 'bg-metro-yellow text-black' :
