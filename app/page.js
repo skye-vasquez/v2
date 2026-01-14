@@ -2419,6 +2419,20 @@ function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
           actionType="maintenance"
         />
       </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'feedback'}
+        onClose={() => setActiveModal(null)}
+        title="Submit Feedback"
+        color="bg-metro-orange/10"
+      >
+        <FeedbackForm
+          onClose={() => setActiveModal(null)}
+          onSubmit={handleSubmitFeedback}
+          store={store}
+          user={user}
+        />
+      </FormModal>
     </div>
   )
 }
