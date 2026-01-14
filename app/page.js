@@ -41,7 +41,12 @@ import {
   ChevronDown,
   ArrowLeft,
   Loader2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  MessageSquare,
+  Lightbulb,
+  ThumbsDown,
+  ThumbsUp,
+  MessageCircle
 } from 'lucide-react'
 
 // ==================== CONSTANTS ====================
