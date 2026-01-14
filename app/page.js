@@ -1444,7 +1444,6 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
                 </p>
               </div>
             </div>
-            </div>
 
             {/* Category Breakdown */}
             <div className="brutal-card p-4 sm:p-6">
