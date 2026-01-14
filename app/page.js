@@ -1221,6 +1221,46 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
   const reports = reportsData?.reports || []
   const users = usersData?.users || []
 
+  // Filter reports based on current filters
+  const filteredReports = reports.filter(r => {
+    // Store filter
+    if (filters.store !== 'all' && r.storeId !== filters.store) return false
+    
+    // Category filter
+    if (filters.category !== 'all' && r.category !== filters.category) return false
+    
+    // Date range filter
+    if (filters.dateRange !== 'all') {
+      const reportDate = new Date(r.createdAt)
+      const now = new Date()
+      if (filters.dateRange === 'today') {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        if (reportDate < today) return false
+      } else if (filters.dateRange === 'week') {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        if (reportDate < weekAgo) return false
+      } else if (filters.dateRange === 'month') {
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        if (reportDate < monthAgo) return false
+      }
+    }
+    
+    // Search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase()
+      const matchesSearch = 
+        r.userEmail?.toLowerCase().includes(searchLower) ||
+        r.storeName?.toLowerCase().includes(searchLower) ||
+        r.description?.toLowerCase().includes(searchLower) ||
+        r.itemName?.toLowerCase().includes(searchLower) ||
+        r.employeeName?.toLowerCase().includes(searchLower) ||
+        r.category?.toLowerCase().includes(searchLower)
+      if (!matchesSearch) return false
+    }
+    
+    return true
+  })
+
   const handleRoleChange = async (userId, newRole) => {
     try {
       await db.transact(tx.users[userId].update({ role: newRole }))
@@ -1241,11 +1281,56 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
     }
   }
 
-  // Stats
+  const handleDeleteReport = async (reportId) => {
+    if (!confirm('Are you sure you want to delete this submission?')) return
+    try {
+      await db.transact(tx.reports[reportId].delete())
+      toast.success('Submission deleted')
+    } catch (error) {
+      toast.error('Failed to delete submission')
+    }
+  }
+
+  const exportReportsCSV = () => {
+    const headers = ['Date', 'Store', 'Category', 'Type', 'Submitted By', 'Details']
+    const rows = filteredReports.map(r => [
+      new Date(r.createdAt).toLocaleString(),
+      r.storeName,
+      r.category,
+      r.type || '',
+      r.userEmail || '',
+      r.description || r.notes || r.itemName || ''
+    ])
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `compliance_hub_export_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Export downloaded!')
+  }
+
+  // Stats - now using all reports for totals, filtered for display
   const stats = {
     totalReports: reports.length,
+    filteredReports: filteredReports.length,
     highPriority: reports.filter(r => r.priority === 'high').length,
     totalUsers: users.length,
+    todayReports: reports.filter(r => {
+      const today = new Date()
+      const reportDate = new Date(r.createdAt)
+      return reportDate.toDateString() === today.toDateString()
+    }).length,
+    weekReports: reports.filter(r => {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      return new Date(r.createdAt) >= weekAgo
+    }).length,
     byCategory: {
       employee: reports.filter(r => r.category === 'employee_action').length,
       inventory: reports.filter(r => r.category === 'inventory_action').length,
@@ -1256,6 +1341,13 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
       acc[store.id] = reports.filter(r => r.storeId === store.id).length
       return acc
     }, {}),
+    byUser: users.reduce((acc, u) => {
+      acc[u.odEmail || u.email] = reports.filter(r => r.userEmail === (u.odEmail || u.email)).length
+      return acc
+    }, {}),
+    cashVariance: reports
+      .filter(r => r.category === 'cash_action' && r.variance)
+      .reduce((sum, r) => sum + parseFloat(r.variance || 0), 0),
   }
 
   return (
