@@ -1530,6 +1530,7 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'reports', label: 'Reports', icon: FileText },
+            { id: 'feedback', label: 'Feedback', icon: MessageCircle },
             { id: 'insights', label: 'Insights', icon: Eye },
             { id: 'users', label: 'Users', icon: Users },
           ].map((tab) => (
