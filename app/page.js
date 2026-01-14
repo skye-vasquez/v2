@@ -2182,7 +2182,7 @@ function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
         </div>
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {/* Employee Action - RSM & Admin Only */}
           <DashboardCard
             title="Employee Action"
@@ -2219,6 +2219,15 @@ function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
             color="bg-metro-yellow text-black"
             shadowColor="brutal-shadow-yellow"
             onClick={() => setActiveModal('store')}
+          />
+
+          {/* Feedback - Available to all staff */}
+          <DashboardCard
+            title="Feedback"
+            icon={MessageCircle}
+            color="bg-metro-orange text-black"
+            shadowColor="brutal-shadow"
+            onClick={() => setActiveModal('feedback')}
           />
         </div>
 
