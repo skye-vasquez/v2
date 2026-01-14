@@ -1038,17 +1038,114 @@ function ReportsList({ reports, title, showStore = true }) {
               )}
             </div>
             <span className="text-xs text-muted-foreground">
-              {new Date(report.createdAt).toLocaleDateString()}
+              {new Date(report.createdAt).toLocaleDateString()} {new Date(report.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
             </span>
           </div>
-          {showStore && <p className="mt-2 font-medium">{report.storeName}</p>}
-          {report.description && (
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{report.description}</p>
+          
+          {/* Submitted by */}
+          {report.userEmail && (
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+              <UserCheck className="w-3 h-3" />
+              Submitted by: <span className="font-medium">{report.userEmail}</span>
+            </p>
           )}
+          
+          {showStore && <p className="mt-2 font-medium">{report.storeName}</p>}
+          
+          {/* Type badge */}
           {report.type && (
             <span className="text-xs font-mono bg-black text-white px-2 py-0.5 mt-2 inline-block">
               {report.type}
             </span>
+          )}
+          
+          {/* Employee Action Details */}
+          {report.category === 'employee_action' && (
+            <div className="mt-2 text-sm">
+              {report.employeeName && <p><strong>Employee:</strong> {report.employeeName}</p>}
+              {report.date && <p><strong>Date:</strong> {report.date}</p>}
+              {report.description && <p className="text-muted-foreground mt-1">{report.description}</p>}
+            </div>
+          )}
+          
+          {/* Inventory Action Details */}
+          {report.category === 'inventory_action' && (
+            <div className="mt-2 text-sm">
+              {report.itemName && <p><strong>Item:</strong> {report.itemName}</p>}
+              {report.sku && <p><strong>SKU:</strong> {report.sku}</p>}
+              {report.quantity && <p><strong>Quantity:</strong> {report.quantity}</p>}
+              {report.problemType && <p><strong>Problem:</strong> <span className="capitalize">{report.problemType}</span></p>}
+              {report.notes && <p className="text-muted-foreground mt-1">{report.notes}</p>}
+              {report.photoUrl && (
+                <a href={report.photoUrl} target="_blank" rel="noopener noreferrer" 
+                   className="text-metro-blue underline text-xs mt-1 inline-block">
+                  View Photo Evidence
+                </a>
+              )}
+            </div>
+          )}
+          
+          {/* Cash Action Details */}
+          {report.category === 'cash_action' && (
+            <div className="mt-2 text-sm">
+              {report.drawerNumber && <p><strong>Drawer:</strong> {report.drawerNumber}</p>}
+              <div className="flex gap-4">
+                {report.expectedAmount && <p><strong>Expected:</strong> ${report.expectedAmount}</p>}
+                {report.actualAmount && <p><strong>Actual:</strong> ${report.actualAmount}</p>}
+              </div>
+              {report.variance && (
+                <p className={`font-bold ${parseFloat(report.variance) < 0 ? 'text-metro-red' : 'text-metro-green'}`}>
+                  Variance: {parseFloat(report.variance) >= 0 ? '+' : ''}${report.variance}
+                </p>
+              )}
+              {report.notes && <p className="text-muted-foreground mt-1">{report.notes}</p>}
+            </div>
+          )}
+          
+          {/* Store Checklist Details */}
+          {report.category === 'store_action' && report.type === 'store_checklist' && (
+            <div className="mt-2 text-sm">
+              <p><strong>Type:</strong> {report.checklistType === 'open' ? '🌅 Opening' : '🌙 Closing'} Checklist</p>
+              <p><strong>Completed:</strong> {report.completedItems}/{report.totalItems} items</p>
+              {report.timestamp && <p><strong>Timestamp:</strong> {new Date(report.timestamp).toLocaleString()}</p>}
+              
+              {/* Show completed items */}
+              {report.items && Object.keys(report.items).length > 0 && (
+                <div className="mt-2 brutal-border p-2 bg-muted">
+                  <p className="text-xs font-bold uppercase mb-1">Completed Items:</p>
+                  <ul className="text-xs space-y-1">
+                    {Object.entries(report.items)
+                      .filter(([_, checked]) => checked)
+                      .map(([itemId]) => (
+                        <li key={itemId} className="flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-metro-green" />
+                          <span className="capitalize">{itemId.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Maintenance Request Details */}
+          {report.category === 'store_action' && report.type === 'maintenance_request' && (
+            <div className="mt-2 text-sm">
+              {report.issue && <p><strong>Issue:</strong> {report.issue}</p>}
+              {report.location && <p><strong>Location:</strong> {report.location}</p>}
+              {report.priority && (
+                <p><strong>Priority:</strong> 
+                  <span className={`ml-1 px-2 py-0.5 text-xs font-bold ${
+                    report.priority === 'high' ? 'bg-metro-red text-white' :
+                    report.priority === 'medium' ? 'bg-metro-yellow text-black' :
+                    'bg-metro-green text-black'
+                  }`}>
+                    {report.priority.toUpperCase()}
+                  </span>
+                </p>
+              )}
+              {report.description && <p className="text-muted-foreground mt-1">{report.description}</p>}
+            </div>
           )}
         </div>
       ))}
@@ -1056,10 +1153,66 @@ function ReportsList({ reports, title, showStore = true }) {
   )
 }
 
+// ==================== DETAILED REPORT VIEW MODAL ====================
+function ReportDetailModal({ report, isOpen, onClose }) {
+  if (!isOpen || !report) return null
+
+  return (
+    <FormModal isOpen={isOpen} onClose={onClose} title="Submission Details">
+      <div className="space-y-4">
+        {/* Header Info */}
+        <div className="brutal-border p-4 bg-muted">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs font-bold uppercase text-muted-foreground">Category</p>
+              <p className="font-bold capitalize">{report.category?.replace('_', ' ')}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase text-muted-foreground">Type</p>
+              <p className="font-bold">{report.type || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase text-muted-foreground">Store</p>
+              <p className="font-bold">{report.storeName}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase text-muted-foreground">Store ID</p>
+              <p className="font-mono text-xs">{report.storeId}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase text-muted-foreground">Submitted By</p>
+              <p className="font-bold text-xs">{report.userEmail || 'Unknown'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase text-muted-foreground">Date/Time</p>
+              <p className="font-bold text-xs">{new Date(report.createdAt).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Full Details */}
+        <div className="brutal-border p-4">
+          <h4 className="font-bold uppercase mb-3">Full Details</h4>
+          <pre className="text-xs bg-muted p-3 overflow-x-auto whitespace-pre-wrap brutal-border">
+            {JSON.stringify(report, null, 2)}
+          </pre>
+        </div>
+      </div>
+    </FormModal>
+  )
+}
+
 // ==================== ADMIN DASHBOARD ====================
 function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboard }) {
   const [activeTab, setActiveTab] = useState('overview')
   const [editingUser, setEditingUser] = useState(null)
+  const [selectedReport, setSelectedReport] = useState(null)
+  const [filters, setFilters] = useState({
+    store: 'all',
+    category: 'all',
+    dateRange: 'all',
+    search: '',
+  })
   
   // Query data
   const { data: reportsData } = db.useQuery({ reports: {} })
