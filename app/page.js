@@ -1494,9 +1494,270 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
         )}
 
         {activeTab === 'reports' && (
-          <div className="brutal-card p-4 sm:p-6">
-            <h3 className="text-base sm:text-lg font-bold uppercase mb-4">All Submissions ({reports.length})</h3>
-            <ReportsList reports={reports.sort((a, b) => b.createdAt - a.createdAt)} />
+          <div className="space-y-4">
+            {/* Filters */}
+            <div className="brutal-card p-4">
+              <div className="flex flex-wrap gap-3 items-end">
+                {/* Search */}
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs font-bold uppercase mb-1">Search</label>
+                  <input
+                    type="text"
+                    value={filters.search}
+                    onChange={(e) => setFilters({...filters, search: e.target.value})}
+                    placeholder="Search by email, store, item..."
+                    className="brutal-input w-full text-sm py-2"
+                  />
+                </div>
+                
+                {/* Store Filter */}
+                <div>
+                  <label className="block text-xs font-bold uppercase mb-1">Store</label>
+                  <select 
+                    value={filters.store}
+                    onChange={(e) => setFilters({...filters, store: e.target.value})}
+                    className="brutal-input text-sm py-2"
+                  >
+                    <option value="all">All Stores</option>
+                    {STORES.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Category Filter */}
+                <div>
+                  <label className="block text-xs font-bold uppercase mb-1">Category</label>
+                  <select 
+                    value={filters.category}
+                    onChange={(e) => setFilters({...filters, category: e.target.value})}
+                    className="brutal-input text-sm py-2"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="employee_action">Employee</option>
+                    <option value="inventory_action">Inventory</option>
+                    <option value="cash_action">Cash</option>
+                    <option value="store_action">Store</option>
+                  </select>
+                </div>
+                
+                {/* Date Filter */}
+                <div>
+                  <label className="block text-xs font-bold uppercase mb-1">Date</label>
+                  <select 
+                    value={filters.dateRange}
+                    onChange={(e) => setFilters({...filters, dateRange: e.target.value})}
+                    className="brutal-input text-sm py-2"
+                  >
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                  </select>
+                </div>
+                
+                {/* Export Button */}
+                <button
+                  onClick={exportReportsCSV}
+                  className="brutal-btn bg-metro-green text-black px-4 py-2 text-sm"
+                >
+                  <FileText className="w-4 h-4 inline mr-1" />
+                  Export CSV
+                </button>
+              </div>
+              
+              {/* Results count */}
+              <p className="text-xs text-muted-foreground mt-3">
+                Showing {filteredReports.length} of {reports.length} submissions
+              </p>
+            </div>
+            
+            {/* Reports List */}
+            <div className="brutal-card p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base sm:text-lg font-bold uppercase">Submissions</h3>
+              </div>
+              
+              {filteredReports.length === 0 ? (
+                <div className="brutal-border p-8 text-center bg-muted">
+                  <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                  <p className="font-bold">No submissions match your filters</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredReports.sort((a, b) => b.createdAt - a.createdAt).map((report) => (
+                    <div key={report.id} className="brutal-border p-4 bg-white">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`text-xs font-bold px-2 py-1 ${
+                              report.category === 'employee_action' ? 'bg-metro-purple text-white' :
+                              report.category === 'inventory_action' ? 'bg-metro-blue text-white' :
+                              report.category === 'cash_action' ? 'bg-metro-green text-black' :
+                              'bg-metro-yellow text-black'
+                            }`}>
+                              {report.category?.replace('_', ' ').toUpperCase()}
+                            </span>
+                            {report.priority === 'high' && (
+                              <span className="text-xs font-bold px-2 py-1 bg-metro-red text-white">
+                                HIGH PRIORITY
+                              </span>
+                            )}
+                            <span className="text-xs font-mono bg-black text-white px-2 py-0.5">
+                              {report.storeName}
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs text-muted-foreground mt-2">
+                            <UserCheck className="w-3 h-3 inline mr-1" />
+                            {report.userEmail || 'Unknown'} • {new Date(report.createdAt).toLocaleString()}
+                          </p>
+                          
+                          {report.type && (
+                            <span className="text-xs font-mono bg-muted px-2 py-0.5 mt-1 inline-block">
+                              {report.type}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 ml-2">
+                          <button
+                            onClick={() => setSelectedReport(report)}
+                            className="brutal-btn bg-metro-blue text-white p-2"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReport(report.id)}
+                            className="brutal-btn bg-metro-red text-white p-2"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'insights' && (
+          <div className="space-y-4 sm:space-y-6">
+            {/* Top Submitters */}
+            <div className="brutal-card p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-bold uppercase mb-4">Top Submitters</h3>
+              <div className="space-y-2">
+                {Object.entries(stats.byUser)
+                  .sort(([,a], [,b]) => b - a)
+                  .slice(0, 5)
+                  .map(([email, count], idx) => (
+                    <div key={email} className="brutal-border p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-8 h-8 brutal-border flex items-center justify-center font-bold ${
+                          idx === 0 ? 'bg-metro-yellow' : idx === 1 ? 'bg-gray-300' : idx === 2 ? 'bg-orange-300' : 'bg-muted'
+                        }`}>
+                          {idx + 1}
+                        </span>
+                        <span className="text-sm font-medium truncate max-w-[200px]">{email}</span>
+                      </div>
+                      <span className="text-xl font-bold">{count}</span>
+                    </div>
+                  ))}
+                {Object.keys(stats.byUser).length === 0 && (
+                  <p className="text-muted-foreground text-center py-4">No submissions yet</p>
+                )}
+              </div>
+            </div>
+
+            {/* Recent High Priority */}
+            <div className="brutal-card p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-bold uppercase mb-4 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-metro-red" />
+                High Priority Items
+              </h3>
+              {reports.filter(r => r.priority === 'high').length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">No high priority items</p>
+              ) : (
+                <ReportsList 
+                  reports={reports.filter(r => r.priority === 'high').sort((a, b) => b.createdAt - a.createdAt).slice(0, 5)} 
+                  showStore={true}
+                />
+              )}
+            </div>
+
+            {/* Cash Summary */}
+            <div className="brutal-card p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-bold uppercase mb-4 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-metro-green" />
+                Cash Summary
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="brutal-border p-4 text-center">
+                  <p className="text-xs font-bold uppercase text-muted-foreground">Total Cash Reports</p>
+                  <p className="text-3xl font-bold">{stats.byCategory.cash}</p>
+                </div>
+                <div className={`brutal-border p-4 text-center ${stats.cashVariance < 0 ? 'bg-metro-red/10' : 'bg-metro-green/10'}`}>
+                  <p className="text-xs font-bold uppercase text-muted-foreground">Net Variance</p>
+                  <p className={`text-3xl font-bold ${stats.cashVariance < 0 ? 'text-metro-red' : 'text-metro-green'}`}>
+                    {stats.cashVariance >= 0 ? '+' : ''}${stats.cashVariance.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Recent cash shortages */}
+              <h4 className="font-bold mt-4 mb-2">Recent Cash Shortages</h4>
+              {reports.filter(r => r.category === 'cash_action' && parseFloat(r.variance) < 0).length === 0 ? (
+                <p className="text-muted-foreground text-sm">No cash shortages reported</p>
+              ) : (
+                <div className="space-y-2">
+                  {reports
+                    .filter(r => r.category === 'cash_action' && parseFloat(r.variance) < 0)
+                    .sort((a, b) => b.createdAt - a.createdAt)
+                    .slice(0, 3)
+                    .map(r => (
+                      <div key={r.id} className="brutal-border p-3 bg-metro-red/10">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-sm">{r.storeName}</p>
+                            <p className="text-xs text-muted-foreground">{r.userEmail} • {new Date(r.createdAt).toLocaleDateString()}</p>
+                          </div>
+                          <span className="text-xl font-bold text-metro-red">${r.variance}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Store Activity Comparison */}
+            <div className="brutal-card p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-bold uppercase mb-4">Store Activity</h3>
+              <div className="space-y-2">
+                {STORES.map(s => {
+                  const count = stats.byStore[s.id] || 0
+                  const maxCount = Math.max(...Object.values(stats.byStore), 1)
+                  const percentage = (count / maxCount) * 100
+                  return (
+                    <div key={s.id} className="brutal-border p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-bold text-sm">{s.name}</span>
+                        <span className="text-lg font-bold">{count}</span>
+                      </div>
+                      <div className="w-full bg-muted brutal-border h-4">
+                        <div 
+                          className="bg-metro-purple h-full transition-all"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1515,29 +1776,80 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
             ) : (
               <div className="space-y-3">
                 {users.map((u) => (
-                  <div key={u.id} className="brutal-border p-4 bg-white flex items-center justify-between">
-                    <div>
-                      <p className="font-bold">{u.email}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-xs font-bold px-2 py-1 ${
-                          u.role === ROLES.ADMIN ? 'bg-metro-red text-white' :
-                          u.role === ROLES.RSM ? 'bg-metro-yellow text-black' :
-                          'bg-muted text-black'
-                        }`}>
-                          {ROLE_LABELS[u.role] || 'Employee'}
-                        </span>
-                        {u.storeId && (
-                          <span className="text-xs font-mono bg-black text-white px-2 py-0.5">
-                            {u.storeId}
+                  <div key={u.id} className="brutal-border p-4 bg-white">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold truncate">{u.odEmail || u.email}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <span className={`text-xs font-bold px-2 py-1 ${
+                            u.role === ROLES.ADMIN ? 'bg-metro-red text-white' :
+                            u.role === ROLES.RSM ? 'bg-metro-yellow text-black' :
+                            'bg-muted text-black'
+                          }`}>
+                            {ROLE_LABELS[u.role] || 'Employee'}
                           </span>
-                        )}
+                          <span className="text-xs text-muted-foreground">
+                            {stats.byUser[u.odEmail || u.email] || 0} submissions
+                          </span>
+                        </div>
                       </div>
-                    </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 ml-2">
                       {editingUser === u.id ? (
                         <div className="flex items-center gap-2">
                           <select
+                            className="brutal-input text-sm py-1"
+                            defaultValue={u.role}
+                            onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          >
+                            <option value={ROLES.EMPLOYEE}>Employee</option>
+                            <option value={ROLES.RSM}>RSM</option>
+                            <option value={ROLES.ADMIN}>Admin</option>
+                          </select>
+                          <button
+                            onClick={() => setEditingUser(null)}
+                            className="brutal-btn bg-muted p-2"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setEditingUser(u.id)}
+                            className="brutal-btn bg-metro-blue text-white p-2"
+                            title="Edit Role"
+                          >
+                            <UserCog className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(u.id)}
+                            className="brutal-btn bg-metro-red text-white p-2"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Report Detail Modal */}
+      <ReportDetailModal 
+        report={selectedReport}
+        isOpen={!!selectedReport}
+        onClose={() => setSelectedReport(null)}
+      />
+    </div>
+  )
+}
                             className="brutal-input text-sm py-1"
                             defaultValue={u.role}
                             onChange={(e) => handleRoleChange(u.id, e.target.value)}
