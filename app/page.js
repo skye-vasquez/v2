@@ -1851,13 +1851,6 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
 }
 
 // ==================== MAIN DASHBOARD ====================
-        )}
-      </main>
-    </div>
-  )
-}
-
-// ==================== MAIN DASHBOARD ====================
 function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
   const { isOnline, queue, addToQueue } = useOfflineQueue()
   const [activeModal, setActiveModal] = useState(null)
