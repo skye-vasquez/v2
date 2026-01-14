@@ -1357,9 +1357,11 @@ function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboar
   // Query data
   const { data: reportsData } = db.useQuery({ reports: {} })
   const { data: usersData } = db.useQuery({ users: {} })
+  const { data: feedbackData } = db.useQuery({ feedback: {} })
   
   const reports = reportsData?.reports || []
   const users = usersData?.users || []
+  const feedbackList = feedbackData?.feedback || []
 
   // Filter reports based on current filters
   const filteredReports = reports.filter(r => {
