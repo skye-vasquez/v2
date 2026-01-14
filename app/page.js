@@ -1562,7 +1562,7 @@ function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
           </div>
           <ReportsList 
             reports={filteredReports.sort((a, b) => b.createdAt - a.createdAt).slice(0, 5)} 
-            showStore={role !== ROLES.EMPLOYEE}
+            showStore={false}
           />
         </div>
       </main>
