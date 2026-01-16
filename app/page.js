@@ -21,7 +21,6 @@ import {
   Wifi,
   WifiOff,
   Plus,
-  Upload,
   Clipboard,
   AlertCircle,
   Award,
@@ -32,20 +31,15 @@ import {
   Sun,
   Moon,
   Shield,
-  Settings,
   BarChart3,
   Eye,
-  Edit,
   Trash2,
   UserCog,
-  ChevronDown,
   ArrowLeft,
   Loader2,
   Image as ImageIcon,
   MessageSquare,
   Lightbulb,
-  ThumbsDown,
-  ThumbsUp,
   MessageCircle
 } from 'lucide-react'
 
@@ -75,7 +69,6 @@ const ROLE_LABELS = {
 function useOfflineQueue() {
   const [isOnline, setIsOnline] = useState(true)
   const [queue, setQueue] = useState([])
-  const [isMounted, setIsMounted] = useState(false)
 
   const syncQueue = async () => {
     if (typeof window === 'undefined') return
@@ -100,8 +93,6 @@ function useOfflineQueue() {
   }
 
   useEffect(() => {
-    setIsMounted(true)
-    
     if (typeof window === 'undefined') return
 
     setIsOnline(navigator.onLine)
@@ -135,7 +126,7 @@ function useOfflineQueue() {
 }
 
 // ==================== AUTH COMPONENT ====================
-function AuthScreen({ onAuth }) {
+function AuthScreen() {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [sentEmail, setSentEmail] = useState('')
@@ -796,6 +787,102 @@ function CashActionForm({ onClose, onSubmit, store, isShortage = false }) {
   )
 }
 
+function CashChangeRequestForm({ onClose, onSubmit, store }) {
+  const [formData, setFormData] = useState({
+    registerNumbers: '',
+    denominationsNeeded: '',
+    urgency: 'medium',
+    notes: '',
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    const registerList = formData.registerNumbers
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+
+    onSubmit({
+      type: 'change_request',
+      registerNumbers: registerList,
+      denominationsNeeded: formData.denominationsNeeded,
+      urgency: formData.urgency,
+      notes: formData.notes,
+      storeId: store.id,
+      storeName: store.name,
+      category: 'cash_action',
+      priority: formData.urgency,
+      createdAt: Date.now(),
+    })
+    onClose()
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Register Numbers (Optional)</label>
+        <input
+          type="text"
+          value={formData.registerNumbers}
+          onChange={(e) => setFormData({ ...formData, registerNumbers: e.target.value })}
+          className="brutal-input w-full"
+          placeholder="e.g., Register 1, Register 3"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Denominations Needed</label>
+        <textarea
+          value={formData.denominationsNeeded}
+          onChange={(e) => setFormData({ ...formData, denominationsNeeded: e.target.value })}
+          className="brutal-input w-full h-24 resize-none"
+          placeholder="e.g., 10x $1, 5x $5, 2x $10"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Urgency</label>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { value: 'low', label: 'Low', color: 'bg-metro-green' },
+            { value: 'medium', label: 'Medium', color: 'bg-metro-yellow' },
+            { value: 'high', label: 'High', color: 'bg-metro-red' },
+          ].map((level) => (
+            <button
+              key={level.value}
+              type="button"
+              onClick={() => setFormData({ ...formData, urgency: level.value })}
+              className={`brutal-border p-3 font-bold ${
+                formData.urgency === level.value
+                  ? `${level.color} ${level.value === 'high' ? 'text-white' : 'text-black'}`
+                  : 'bg-white'
+              }`}
+            >
+              {level.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold uppercase mb-2">Notes (Optional)</label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          className="brutal-input w-full h-24 resize-none"
+          placeholder="Add any context for the request..."
+        />
+      </div>
+
+      <button type="submit" className="brutal-btn w-full bg-metro-blue text-white py-4">
+        <Send className="w-5 h-5 inline mr-2" />
+        Submit Change Request
+      </button>
+    </form>
+  )
+}
+
 // ==================== STORE ACTION FORM ====================
 function StoreActionForm({ onClose, onSubmit, store, actionType = 'checklist' }) {
   const openingChecklistItems = [
@@ -1176,7 +1263,9 @@ function ReportsList({ reports, title, showStore = true }) {
                 report.category === 'cash_action' ? 'bg-metro-green text-black' :
                 'bg-metro-yellow text-black'
               }`}>
-                {report.category?.replace('_', ' ').toUpperCase()}
+                {report.category === 'cash_action' && report.type === 'change_request'
+                  ? 'CHANGE REQUEST'
+                  : report.category?.replace('_', ' ').toUpperCase()}
               </span>
               {report.priority === 'high' && (
                 <span className="ml-2 text-xs font-bold px-2 py-1 bg-metro-red text-white">
@@ -1233,7 +1322,7 @@ function ReportsList({ reports, title, showStore = true }) {
           )}
           
           {/* Cash Action Details */}
-          {report.category === 'cash_action' && (
+          {report.category === 'cash_action' && report.type !== 'change_request' && (
             <div className="mt-2 text-sm">
               {report.drawerNumber && <p><strong>Drawer:</strong> {report.drawerNumber}</p>}
               <div className="flex gap-4">
@@ -1244,6 +1333,21 @@ function ReportsList({ reports, title, showStore = true }) {
                 <p className={`font-bold ${parseFloat(report.variance) < 0 ? 'text-metro-red' : 'text-metro-green'}`}>
                   Variance: {parseFloat(report.variance) >= 0 ? '+' : ''}${report.variance}
                 </p>
+              )}
+              {report.notes && <p className="text-muted-foreground mt-1">{report.notes}</p>}
+            </div>
+          )}
+
+          {report.category === 'cash_action' && report.type === 'change_request' && (
+            <div className="mt-2 text-sm">
+              {report.registerNumbers?.length > 0 && (
+                <p><strong>Registers:</strong> {report.registerNumbers.join(', ')}</p>
+              )}
+              {report.denominationsNeeded && (
+                <p><strong>Denominations:</strong> {report.denominationsNeeded}</p>
+              )}
+              {report.urgency && (
+                <p><strong>Urgency:</strong> <span className="capitalize">{report.urgency}</span></p>
               )}
               {report.notes && <p className="text-muted-foreground mt-1">{report.notes}</p>}
             </div>
@@ -1350,7 +1454,7 @@ function ReportDetailModal({ report, isOpen, onClose }) {
 }
 
 // ==================== ADMIN DASHBOARD ====================
-function AdminDashboard({ user, store, onLogout, onChangeStore, onBackToDashboard }) {
+function AdminDashboard({ user, onLogout, onBackToDashboard }) {
   const [activeTab, setActiveTab] = useState('overview')
   const [editingUser, setEditingUser] = useState(null)
   const [selectedReport, setSelectedReport] = useState(null)
@@ -2487,7 +2591,7 @@ function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
         color="bg-metro-green/10"
       >
         <div className="mb-6">
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <button
               onClick={() => setActiveModal('cash-shortage')}
               className="brutal-btn bg-metro-red text-white p-4"
@@ -2501,6 +2605,13 @@ function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
             >
               <DollarSign className="w-8 h-8 mx-auto mb-2" />
               Reconciliation
+            </button>
+            <button
+              onClick={() => setActiveModal('cash-change-request')}
+              className="brutal-btn bg-metro-blue text-white p-4"
+            >
+              <Plus className="w-8 h-8 mx-auto mb-2" />
+              Request Change
             </button>
           </div>
         </div>
@@ -2531,6 +2642,19 @@ function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
           onSubmit={handleSubmitReport}
           store={store}
           isShortage={false}
+        />
+      </FormModal>
+
+      <FormModal
+        isOpen={activeModal === 'cash-change-request'}
+        onClose={() => setActiveModal(null)}
+        title="Request Change"
+        color="bg-metro-blue/10"
+      >
+        <CashChangeRequestForm
+          onClose={() => setActiveModal(null)}
+          onSubmit={handleSubmitReport}
+          store={store}
         />
       </FormModal>
 
@@ -2607,7 +2731,7 @@ function Dashboard({ user, userProfile, store, onLogout, onChangeStore }) {
 
 // ==================== MAIN APP ====================
 export default function App() {
-  const { isLoading: authLoading, user, error } = db.useAuth()
+  const { isLoading: authLoading, user } = db.useAuth()
   const [selectedStore, setSelectedStore] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
   const [profileLoading, setProfileLoading] = useState(false)
